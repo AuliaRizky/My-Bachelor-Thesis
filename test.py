@@ -10,7 +10,7 @@ This file is used for testing models. Please see the README for details about te
 from __future__ import print_function
 
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 plt.ioff()
 
@@ -23,6 +23,7 @@ import numpy as np
 import scipy.ndimage.morphology
 from skimage import measure, filters
 from metrics import dc, jc, assd
+from PIL import Image
 
 from keras import backend as K
 K.set_image_data_format('channels_last')
@@ -68,7 +69,7 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
     else:
         weights_path = join(args.data_root_dir, args.weights_path)
 
-    output_dir = join(args.data_root_dir, 'results', args.net, 'split_' + str(args.split_num))
+    output_dir = join('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation', 'results', args.net)
     raw_out_dir = join(output_dir, 'raw_output')
     fin_out_dir = join(output_dir, 'final_output')
     fig_out_dir = join(output_dir, 'qual_figs')
@@ -110,30 +111,31 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
     # Testing the network
     print('Testing... This will take some time...')
 
-    with open(join(output_dir, args.save_prefix + outfile + 'scores.csv'), 'wb') as csvfile:
+    with open(join(output_dir, args.save_prefix + outfile + 'scores.csv'), 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
         row = ['Scan Name']
         if args.compute_dice:
             row.append('Dice Coefficient')
+
         if args.compute_jaccard:
             row.append('Jaccard Index')
+
         if args.compute_assd:
             row.append('Average Symmetric Surface Distance')
 
         writer.writerow(row)
 
-
-        indices = np.arange(0, images_test.shape[2], 1)
-        for i in indices:
+        # indices = np.arange(0, images_test.shape[2], 1)
+        for i in range(0, images_test.shape[2]):
             num_slices = 1
-            output_array = eval_model.predict_generator(generate_test_batches(args.data_root_dir, images_test[:, :, i:i+1:1],
+            output_array = eval_model.predict_generator(generate_test_batches(images_test[:, :, i:i+1:1],
                                                                               net_input_shape,
-                                                                              batchSize=args.batch_size,
+                                                                              batchSize=1,
                                                                               numSlices=args.slices,
                                                                               subSampAmt=0,
                                                                               stride=1),
-                                                        steps=num_slices, max_queue_size=1, workers=1,
+                                                        steps=num_slices, max_queue_size=10, workers=4,
                                                         use_multiprocessing=False, verbose=1)
 
             if args.net.find('caps') != -1:
@@ -147,9 +149,20 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
             output_bin = threshold_mask(output, args.thresh_level)
             output_mask = sitk.GetImageFromArray(output_bin)
 
-            print('Saving Output')
-            sitk.WriteImage(output_img, join(raw_out_dir, i + '_raw_output'))
-            sitk.WriteImage(output_mask, join(fin_out_dir, i + '_final_output' ))
+            print(output.shape)
+            output = np.rollaxis(output, 0, 3)
+
+            print(output.shape)
+
+            plt.imshow(output[:, :, 0], cmap='gray')
+            plt.show()
+
+            plt.imshow(output_mask, cmap='gray')
+            plt.show()
+
+            '''print('Saving Output')
+            sitk.WriteImage(output_img, join(raw_out_dir, str(i) + '_raw_output'))
+            sitk.WriteImage(output_mask, join(fin_out_dir, str(i) + '_final_output'))'''
 
             # Load gt mask
 
