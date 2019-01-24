@@ -8,7 +8,7 @@ This is a helper file for choosing which model to create.
 '''
 import tensorflow as tf
 
-def create_model(args, input_shape, enable_decoder=True):
+def create_model(args, input_shape):
     # If using CPU or single GPU
     if args.gpus <= 1:
         if args.net == 'segcapsr1':
@@ -17,12 +17,16 @@ def create_model(args, input_shape, enable_decoder=True):
             return model_list
         elif args.net == 'segcapsr3':
             from capsnet import CapsNetR3
-            model_list = CapsNetR3(input_shape, args.num_class, enable_decoder)
+            model_list = CapsNetR3(input_shape)
             return model_list
         elif args.net == 'segcapsbasic':
             from capsnet import CapsNetBasic
             model_list = CapsNetBasic(input_shape)
             return model_list
+        elif args.net == 'unet':
+            from unet import UNet
+            model_list = UNet(input_shape)
+            return [model_list]
         else:
             raise Exception('Unknown network type specified: {}'.format(args.net))
     # If using multiple GPUs
@@ -34,11 +38,15 @@ def create_model(args, input_shape, enable_decoder=True):
                 return model_list
             elif args.net == 'segcapsr3':
                 from capsnet import CapsNetR3
-                model_list = CapsNetR3(input_shape, args.num_class, enable_decoder)
+                model_list = CapsNetR3(input_shape)
                 return model_list
             elif args.net == 'segcapsbasic':
                 from capsnet import CapsNetBasic
                 model_list = CapsNetBasic(input_shape)
                 return model_list
+            elif args.net == 'unet':
+                from unet import UNet
+                model_list = UNet(input_shape)
+                return [model_list]
             else:
                 raise Exception('Unknown network type specified: {}'.format(args.net))
