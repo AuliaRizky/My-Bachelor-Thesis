@@ -12,91 +12,68 @@
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-import keras as K
-import tensorflow as tf
-from skimage import exposure
-from medpy.filter import IntensityRangeStandardization
+from keras import backend as K
+K.set_image_data_format('channels_last')
+
 from os.path import join
 from os import makedirs
 from os import environ
-from capsnet import CapsNetBasic
+
 from keras.utils import print_summary
 from time import gmtime, strftime
 
-from numpy.random import shuffle
 
 from testing_for_load_data import read_and_process_data, equalize_image
+from model_helper import create_model
 
-time = strftime("%Y-%m-%d-%H:%M:%S", gmtime())
+time = strftime("%Y-%m-%d-%H-%M-%S", gmtime())
 
 def main(args):
     # Ensure training and testing are not all turned off
     assert (args.train or args.test), 'Cannot have train or tes as 0'
 
     # Load the data
-    images, ground_truth, images_list, ground_truth_list = read_and_process_data(args.data_root_dir)
+    images, ground_truth = read_and_process_data(args.data_root_dir)
 
-    # This section used to split the train and test
-    index_split = np.arange(0, 527,1)
-    shuffle(index_split)
-    '''counter = 0
+    images_train = images[:, :, :475]
+    images_val = images[:, :, 476:495:1]
+    images_test = images[:, :, 496:527:1]
 
-    images_test = []
-    images_train = []
-    g_t_test = []
-    g_t_train = []
-
-    for i in index_split:
-        if counter < 51:
-            test_holder = images[:, :, i]
-            gt_test_holder = ground_truth[:, :, i]
-
-            images_test.append(test_holder)
-            g_t_test.append(gt_test_holder)
-            counter += 1
-        else:
-            train_holder = images[:, :, i]
-            gt_train_holder = ground_truth[:, :, i]
-
-            images_train.append(train_holder)
-            g_t_train.append(gt_train_holder)
-
-    num_train_set = len(images_train)'''
-
-    images_train = images[:, :, :369]
-    images_val = images[:, :, 370:475:1]
-    images_test = images[:,:, 476:527:1]
-
-    g_t_train = ground_truth[:, :, :369]
-    g_t_val = ground_truth[:, :, 370:475:1]
-    g_t_tes = ground_truth[:, :, 476:527:1]
+    g_t_train = ground_truth[:, :, :475]
+    g_t_val = ground_truth[:, :, 476:495:1]
+    g_t_tes = ground_truth[:, :, 496:527:1]
 
     eq_img_train = equalize_image(images_train)
-    print(eq_img_train.shape)
+    eq_img_val = equalize_image(images_val)
 
-    '''irs = IntensityRangeStandardization()
-    trained_model = irs.train_transform(images_list, surpress_mapping_check=True)
-    plt.imshow(trained_model, cmap='gray')
-    plt.show()'''
-
-    plt.imshow(eq_img_train[:, :, 27], cmap='gray')
-    plt.show()
 
     # Read the data to determine the basic shape of the data
     # Evaluate this algorithm to read the shape of the image
 
     input_shape = (192, 192, 1)
 
-    plt.imshow(images_train[:, :, 90], cmap='gray')
+    plt.imshow(eq_img_train[:, :, 20], cmap='gray')
     plt.show()
 
-    plt.imshow(images_train[:, :, 70], cmap='gray')
-    plt.show()
+    # print(images_val.shape[2])
+    # index_j = images[0].shape
+    # print(index_j[2])
+    # print(len(images))
+    # print(images[0])
+    # print(images[0].shape)
+
+    # Show Sample Image
+    # plt.imshow(images_train[:, :, 90])
+    # plt.show()
+
+    # print(images[0].shape)
+    # images[0] = np.expand_dims(images[0], axis = 2)
 
     # Create the model for training and testing
     # model_list = [0] train_model, [1] eval_model
-    # model_list = create_model(args=args, input_shape=input_shape, enable_decoder=True)
-    model_list = CapsNetBasic(input_shape)
+    # model_list = CapsNetBasic(input_shape)
+
+    model_list = create_model(args=args, input_shape=input_shape)
 
     print_summary(model=model_list[0], positions=[.38, .65, .75, 1.])
 
@@ -107,25 +84,25 @@ def main(args):
                        '_lr-' + str(args.initial_lr) + '_recon-' + str(args.recon_wei)
     args.time = time
 
-    args.check_dir = join('D:\Segmentasi Stroke Iskemik', 'saved_models', 'basicsegcaps')
+    args.check_dir = join('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation', 'saved_models')
     try:
         makedirs(args.check_dir)
     except:
         pass
 
-    args.log_dir = join('D:\Segmentasi Stroke Iskemik', 'logs', 'basicsegcaps')
+    args.log_dir = join('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation', 'logs')
     try:
         makedirs(args.log_dir)
     except:
         pass
 
-    args.tf_log_dir = join('D:\Segmentasi Stroke Iskemik', 'tf_logs')
+    args.tf_log_dir = join('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation', 'tf_logs')
     try:
         makedirs(args.tf_log_dir)
     except:
         pass
 
-    args.output_dir = join('D:\Segmentasi Stroke Iskemik', 'plots', 'basicsegcaps')
+    args.output_dir = join('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation', 'plots', 'basicsegcaps')
     try:
         makedirs(args.output_dir)
     except:
@@ -134,16 +111,12 @@ def main(args):
     if args.train:
         from train import train
         # Run training
-        train(args, images_train,  g_t_train, model_list[0], input_shape)
-
-    if args.activation:
-        from activation import activation_layer
-        activation_layer(images_test, model_list[0], 1)
+        train(args, eq_img_train, eq_img_val,  g_t_train, g_t_val, model_list[0], input_shape)
 
     if args.test:
         from test import test
         # Run testing
-        test(args, images_test, g_t_tes, model_list[1], input_shape)
+        test(args, images_test, g_t_tes, model_list, input_shape)
 
 
 if __name__ == '__main__':
@@ -159,20 +132,20 @@ if __name__ == '__main__':
                         help='Choose your network.')
     parser.add_argument('--train', type=int, default=1, choices=[0,1],
                         help='Set to 1 to enable training.')
-    parser.add_argument('--act_layer', type=int, default=1, choices=[0, 1],
-                        help='Set to 1 to enable activation layer to be visualize.')
     parser.add_argument('--test', type=int, default=1, choices=[0,1],
                         help='Set to 1 to enable testing.')
+    '''parser.add_argument('--manip', type=int, default=1, choices=[0,1],
+                       help='Set to 1 to enable manipulation.')'''
     parser.add_argument('--shuffle_data', type=int, default=1, choices=[0,1],
                         help='Whether or not to shuffle the training data (both per epoch and in slice order.')
     parser.add_argument('--aug_data', type=int, default=1, choices=[0,1],
                        help='Whether or not to use data augmentation during training.')
-    parser.add_argument('--loss', type=str.lower, default='w_bce', choices=['bce', 'w_bce', 'dice', 'mar', 'w_mar'],
+    parser.add_argument('--loss', type=str.lower, default='dice', choices=['bce', 'w_bce', 'dice', 'mar', 'w_mar'],
                         help='Which loss to use. "bce" and "w_bce": unweighted and weighted binary cross entropy'
                              '"dice": soft dice coefficient, "mar" and "w_mar": unweighted and weighted margin loss.')
     parser.add_argument('--batch_size', type=int, default=1,
                         help='Batch size for training/testing.')
-    parser.add_argument('--initial_lr', type=float, default=0.01,
+    parser.add_argument('--initial_lr', type=float, default=0.1,
                         help='Initial learning rate for Adam.')
     parser.add_argument('--recon_wei', type=float, default=131.072,
                         help="If using capsnet: The coefficient (weighting) for the loss of decoder")
@@ -227,4 +200,6 @@ if __name__ == '__main__':
                                                        'data parallelism, modifications must be made to the code.'
 
     main(arguments)
+
+
 
