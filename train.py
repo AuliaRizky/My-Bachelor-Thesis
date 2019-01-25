@@ -20,15 +20,6 @@ import tensorflow as tf
 from custom_losses import dice_hard, weighted_binary_crossentropy_loss, dice_loss, margin_loss
 from testing_for_load_data import generate_train_batches, generate_val_batches
 
-
-'''def load_class_w(train_list):
-    print('Class weight file {} not found.\nComputing class weights now. This may take '
-          'some time.'.format(class_weight_filename))
-    value = compute_class_weights(train_list)
-    np.save(class_weight_filename, value)
-    print('Finished computing class weights. This value has been saved for this training split.')
-    return value'''
-
 def get_loss(train_list, split, net, recon_wei, choice):
 
     if choice == 'dice':
@@ -130,9 +121,9 @@ def train(args, images_train, images_val, g_t_train, g_t_val, u_model, net_input
     # Training the network
 
     history = model.fit_generator(generate_train_batches(images_train, g_t_train, net_input_shape, net=args.net, batchSize=args.batch_size, numSlices=args.slices, subSampAmt=args.subsamp,stride=args.stride, shuff=args.shuffle_data, aug_data=args.aug_data),
-                                  steps_per_epoch=475//args.batch_size, epochs=100, verbose=1, callbacks=callbacks,
-                                  validation_data=generate_val_batches(images_val, g_t_val, net_input_shape, net=args.net,batchSize=args.batch_size,  numSlices=args.slices, subSampAmt=0,stride=2, shuff=args.shuffle_data),
-                                  validation_steps=20//args.batch_size, max_queue_size=10, workers=4, use_multiprocessing=False)
+                                  steps_per_epoch=100//args.batch_size, epochs=100, verbose=1, callbacks=callbacks,
+                                  validation_data=generate_val_batches(images_train, g_t_train, net_input_shape, net=args.net,batchSize=args.batch_size, numSlices=args.slices, subSampAmt=0,stride=2, shuff=args.shuffle_data),
+                                  validation_steps=100//args.batch_size, max_queue_size=10, workers=4, use_multiprocessing=False)
 
     # Plot the training data collected
     plot_training(history, args)
