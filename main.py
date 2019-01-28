@@ -4,7 +4,6 @@
     Don't forget to parse the arguments needed!
     Developed from all other programmer that share their works as open source project
     This work based on the work of SegCaps algorithm developed by La Londe Rodney
-
     A bachelor thesis work by Aulia Rizky Hermawan
     Student of Engineering Physics, Universitas Gadjah Mada, Indonesia
 '''
@@ -52,7 +51,10 @@ def main(args):
 
     input_shape = (192, 192, 1)
 
-    plt.imshow(eq_img_train[:, :, 20], cmap='gray')
+    plt.imshow(images_train[:, :, 67], cmap='gray')
+    plt.show()
+
+    plt.imshow(g_t_train[:, :, 67], cmap='gray')
     plt.show()
 
     # print(images_val.shape[2])
