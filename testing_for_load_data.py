@@ -161,7 +161,7 @@ def generate_train_batches(image, ground_truth, net_input_shape, net, batchSize=
             subSampAmt = int(rand(1) * (369 * 0.05))
 
         for j in range(0, 99):
-            if not np.any(ground_truth[:, :, 26:26:1]):
+            if not np.any(ground_truth[:, :, 66:67:1]):
                 continue
 
             # insert the img_batch from image_data for train where took all the [:, :, x:y:z]
@@ -170,12 +170,12 @@ def generate_train_batches(image, ground_truth, net_input_shape, net, batchSize=
             # for next j=1, take all [:,:, 1:2:1]
             # for j=10, take all [:,:, 10:11:1]
             if img_batch.ndim == 4:
-                img_batch[count, :, :, :] = image[:, :, 26:27:1]
-                mask_batch[count, :, :, :] = ground_truth[:, :, 26:27:1]
+                img_batch[count, :, :, :] = image[:, :, 66:67:1]
+                mask_batch[count, :, :, :] = ground_truth[:, :, 66:67:1]
             elif img_batch.ndim == 5:
                 # Assumes img and mask are single channel. Replace 0 with : if multi-channel.
-                img_batch[count, :, :, :, 0] = image[:, :, 26:27:1]
-                mask_batch[count, :, :, :, 0] = ground_truth[:, :, 26:27:1]
+                img_batch[count, :, :, :, 0] = image[:, :, 66:67:1]
+                mask_batch[count, :, :, :, 0] = ground_truth[:, :, 66:67:1]
             else:
                 logging.error('\nError this function currently only supports 2D and 3D data.')
                 exit(0)
@@ -226,17 +226,17 @@ def generate_val_batches(val_list, gt_val_list, net_input_shape, net, batchSize=
         elif subSampAmt == -1 and numSlices > 1:
             np.random.seed(None)
             subSampAmt = int(rand(1) * 527 * 0.05)
-            
-        for j in range(0, 99):
-            if not np.any(gt_val_list[:, :, 26:27:1]):
+
+        for j in range(0, 19):
+            if not np.any(gt_val_list[:, :, 66:67:1]):
                 continue
             if img_batch.ndim == 4:
-                img_batch[count, :, :, :] = val_list[:, :, 26:27:1]
-                mask_batch[count, :, :, :] = gt_val_list[:, :, 26:27:1]
+                img_batch[count, :, :, :] = val_list[:, :, 66:67:1]
+                mask_batch[count, :, :, :] = gt_val_list[:, :, 66:67:1]
             elif img_batch.ndim == 5:
                 # Assumes img and mask are single channel. Replace 0 with : if multi-channel.
-                img_batch[count, :, :, :, 0] = val_list[:, :, 26:27:1]
-                mask_batch[count, :, :, :, 0] = gt_val_list[:, :, 26:27:1]
+                img_batch[count, :, :, :, 0] = val_list[:, :, 66:67:1]
+                mask_batch[count, :, :, :, 0] = gt_val_list[:, :, 66:67:1]
             else:
                 logging.error('\nError this function currently only supports 2D and 3D data.')
                 exit(0)
@@ -289,5 +289,4 @@ def generate_test_batches(images_test, net_input_shape, batchSize=1, numSlices=1
             yield (img_batch)
 
     if count != 0:
-yield (img_batch[:count, :, :, :])
-
+        yield (img_batch[:count, :, :, :])
