@@ -1,4 +1,6 @@
 
+
+
 from __future__ import print_function
 
 import matplotlib
@@ -17,19 +19,32 @@ from keras.utils import multi_gpu_model
 from keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping, ReduceLROnPlateau, TensorBoard
 import tensorflow as tf
 
-from custom_losses import dice_hard, weighted_binary_crossentropy_loss, dice_loss, margin_loss
+from custom_losses import dice_hard, weighted_binary_crossentropy_loss, dice_loss, margin_loss, dice_coef_loss
 from testing_for_load_data import generate_train_batches, generate_val_batches
+
+
+'''def load_class_w(train_list):
+    print('Class weight file {} not found.\nComputing class weights now. This may take '
+          'some time.'.format(class_weight_filename))
+    value = compute_class_weights(train_list)
+    np.save(class_weight_filename, value)
+    print('Finished computing class weights. This value has been saved for this training split.')
+    return value'''
 
 def get_loss(train_list, split, net, recon_wei, choice):
 
     if choice == 'dice':
-        loss = dice_loss
+        # loss = dice_loss
+        loss = dice_coef_loss
+
+    elif choice == 'mar':
+        loss = margin_loss(margin=0.4, downweight=0.5, pos_weight=1.0)
 
     else:
         raise Exception("Unknown loss_type")
 
     if net.find('caps') != -1:
-        return {'out_seg': loss, 'out_recon': 'mse'}, {'out_seg': 10., 'out_recon': recon_wei}
+        return {'out_seg': loss, 'out_recon': 'mse'}, {'out_seg': 1.0, 'out_recon': recon_wei}
     else:
         return loss, None
 
@@ -44,7 +59,7 @@ def get_callbacks(arguments):
     model_checkpoint = ModelCheckpoint(join(arguments.check_dir, arguments.time + '.hdf5'),
                                        monitor=monitor_name, save_best_only=True, save_weights_only=True,
                                        verbose=1, mode='max')
-    lr_reducer = ReduceLROnPlateau(monitor=monitor_name, factor=0.05, cooldown=0, patience=5,verbose=1, mode='max')
+    lr_reducer = ReduceLROnPlateau(monitor=monitor_name, factor=0.05, cooldown=0, patience=10,verbose=1, mode='max')
     early_stopper = EarlyStopping(monitor=monitor_name, min_delta=0, patience=25, verbose=0, mode='max')
 
     return [model_checkpoint, csv_logger, lr_reducer, early_stopper, tb]
@@ -122,8 +137,8 @@ def train(args, images_train, images_val, g_t_train, g_t_val, u_model, net_input
 
     history = model.fit_generator(generate_train_batches(images_train, g_t_train, net_input_shape, net=args.net, batchSize=args.batch_size, numSlices=args.slices, subSampAmt=args.subsamp,stride=args.stride, shuff=args.shuffle_data, aug_data=args.aug_data),
                                   steps_per_epoch=100//args.batch_size, epochs=100, verbose=1, callbacks=callbacks,
-                                  validation_data=generate_val_batches(images_train, g_t_train, net_input_shape, net=args.net,batchSize=args.batch_size, numSlices=args.slices, subSampAmt=0,stride=2, shuff=args.shuffle_data),
-                                  validation_steps=100//args.batch_size, max_queue_size=10, workers=4, use_multiprocessing=False)
+                                  validation_data=generate_val_batches(images_train, g_t_train, net_input_shape, net=args.net,batchSize=args.batch_size,  numSlices=args.slices, subSampAmt=0,stride=2, shuff=args.shuffle_data),
+                                  validation_steps=19//args.batch_size, max_queue_size=10, workers=4, use_multiprocessing=False)
 
     # Plot the training data collected
     plot_training(history, args)

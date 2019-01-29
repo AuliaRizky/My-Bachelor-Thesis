@@ -9,7 +9,6 @@
 '''
 
 import argparse
-import numpy as np
 import matplotlib.pyplot as plt
 from keras import backend as K
 K.set_image_data_format('channels_last')
@@ -45,11 +44,12 @@ def main(args):
     eq_img_train = equalize_image(images_train)
     eq_img_val = equalize_image(images_val)
 
-
     # Read the data to determine the basic shape of the data
     # Evaluate this algorithm to read the shape of the image
 
-    input_shape = (192, 192, 1)
+    # input_shape = (192, 192, 1)
+    input_shape = (images.shape[0], images.shape[1], 1)
+    print(input_shape)
 
     plt.imshow(images_train[:, :, 67], cmap='gray')
     plt.show()
@@ -57,19 +57,8 @@ def main(args):
     plt.imshow(g_t_train[:, :, 67], cmap='gray')
     plt.show()
 
-    # print(images_val.shape[2])
-    # index_j = images[0].shape
-    # print(index_j[2])
-    # print(len(images))
-    # print(images[0])
-    # print(images[0].shape)
-
-    # Show Sample Image
-    # plt.imshow(images_train[:, :, 90])
-    # plt.show()
-
-    # print(images[0].shape)
-    # images[0] = np.expand_dims(images[0], axis = 2)
+    plt.imshow(images_train[:, :, 67] * g_t_train[:, :, 67], cmap='gray')
+    plt.show()
 
     # Create the model for training and testing
     # model_list = [0] train_model, [1] eval_model
@@ -104,7 +93,7 @@ def main(args):
     except:
         pass
 
-    args.output_dir = join('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation', 'plots', 'basicsegcaps')
+    args.output_dir = join('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation', 'plots', args.net)
     try:
         makedirs(args.output_dir)
     except:
@@ -118,7 +107,7 @@ def main(args):
     if args.test:
         from test import test
         # Run testing
-        test(args, images_test, g_t_tes, model_list, input_shape)
+        test(args, images_test, g_t_tes, model_list[1], input_shape)
 
 
 if __name__ == '__main__':
@@ -147,7 +136,7 @@ if __name__ == '__main__':
                              '"dice": soft dice coefficient, "mar" and "w_mar": unweighted and weighted margin loss.')
     parser.add_argument('--batch_size', type=int, default=1,
                         help='Batch size for training/testing.')
-    parser.add_argument('--initial_lr', type=float, default=0.1,
+    parser.add_argument('--initial_lr', type=float, default=0.01,
                         help='Initial learning rate for Adam.')
     parser.add_argument('--recon_wei', type=float, default=131.072,
                         help="If using capsnet: The coefficient (weighting) for the loss of decoder")
@@ -202,6 +191,3 @@ if __name__ == '__main__':
                                                        'data parallelism, modifications must be made to the code.'
 
     main(arguments)
-
-
-

@@ -33,6 +33,7 @@ import os
 import nibabel as nib
 import numpy as np
 import logging
+import operator
 from keras import backend as K
 K.set_image_data_format('channels_last')
 from skimage import exposure
@@ -73,7 +74,15 @@ def equalize_image(image_train):
     index = np.arange(0, image_train.shape[2], 1)
     for i in index:
         eq_img.append(exposure.equalize_hist(image_train[:, :, i]))
-    return np.stack(eq_img, axis=2)
+    return np.stack(eq_img, axis=-1)
+
+# Credit to https://stackoverflow.com/users/3931936/losses-don
+
+def cropND(img, bounding):
+    start = tuple(map(lambda a, da: a//2-da//2, img.shape, bounding))
+    end = tuple(map(operator.add, start, bounding))
+    slices = tuple(map(slice, start, end))
+    return img[slices]
 
 def get_extension(filename):
     filename, extension = os.path.splitext(filename)
@@ -117,14 +126,14 @@ def read_and_process_data(data_dir):
                     print('currently getting the image of ADC')
 
                     for j in index:
-                        image_list.append(np.array(image[:, :, j:j+1:2].astype(np.float32)))
+                        image_list.append(cropND(np.array(image[:, :, j:j+1:1].astype(np.float32)), (140, 140)))
 
                     print('ADC has been gathered')
 
                 if image_type == '.OT':
                     print('currently getting the image of Ground Truth')
                     for j in index:
-                        ground_truth_list.append(np.array(image[:, :, j:j+1:2].astype(np.float32)))
+                        ground_truth_list.append(cropND(np.array(image[:, :, j:j+1:1].astype(np.float32)), (140,140)))
 
                     print('the image of Ground Truth has been sliced')
 
@@ -136,8 +145,8 @@ def read_and_process_data(data_dir):
             else:
                 continue
     # Do split here
-    image_all = np.concatenate(image_list, axis=2)
-    ground_truth_all = np.concatenate(ground_truth_list, axis=2)
+    image_all = np.concatenate(image_list, axis=-1)
+    ground_truth_all = np.concatenate(ground_truth_list, axis=-1)
 
     return image_all, ground_truth_all
 

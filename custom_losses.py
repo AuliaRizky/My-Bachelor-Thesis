@@ -10,6 +10,22 @@ This file contains the definitions of custom loss functions not present in the d
 '''
 
 import tensorflow as tf
+from keras import backend as K
+
+def dice_coef(y_true, y_pred, smooth=1e-5):
+    """
+    Dice = (2*|X & Y|)/ (|X|+ |Y|)
+         =  2*sum(|A*B|)/(sum(A^2)+sum(B^2))
+    ref: https://arxiv.org/pdf/1606.04797v1.pdf
+    """
+    intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
+    return (2. * intersection + smooth) / (K.sum(K.square(y_true),-1) + K.sum(K.square(y_pred),-1) + smooth)
+
+def dice_coef_loss(y_true, y_pred):
+    return 1-dice_coef(y_true, y_pred)
+
+
+
 
 def dice_soft(y_true, y_pred, loss_type='sorensen', axis=[1,2,3], smooth=1e-5, from_logits=False):
     """Soft dice (Sørensen or Jaccard) coefficient for comparing the similarity
@@ -46,8 +62,8 @@ def dice_soft(y_true, y_pred, loss_type='sorensen', axis=[1,2,3], smooth=1e-5, f
     if not from_logits:
         # transform back to logits
         _epsilon = tf.convert_to_tensor(1e-7, y_pred.dtype.base_dtype)
-        y_pred = tf.clip_by_value(y_pred, _epsilon, 1 - _epsilon)   # Every value less than _epsilon are set to _epsilon and so for the 1 - _epsilon
-        y_pred = tf.log(y_pred / (1 - y_pred))  # Every element in tensor ar set to log e(x)
+        y_pred = tf.clip_by_value(y_pred, _epsilon, 1 - _epsilon)
+        y_pred = tf.log(y_pred / (1 - y_pred))
 
     inse = tf.reduce_sum(y_pred * y_true, axis=axis)
     if loss_type == 'jaccard':
@@ -69,7 +85,7 @@ def dice_soft(y_true, y_pred, loss_type='sorensen', axis=[1,2,3], smooth=1e-5, f
     return dice
 
 
-def dice_hard(y_true, y_pred, threshold=0.5, axis=[1,2,3], smooth=1e-5):
+def dice_hard(y_true, y_pred, threshold=0.7, axis=[1,2,3], smooth=1e-5):
     """Non-differentiable Sørensen–Dice coefficient for comparing the similarity
     of two batch of data, usually be used for binary image segmentation i.e. labels are binary.
     The coefficient between 0 to 1, 1 if totally match.
@@ -91,7 +107,7 @@ def dice_hard(y_true, y_pred, threshold=0.5, axis=[1,2,3], smooth=1e-5):
     -----------
     - `Wiki-Dice <https://en.wikipedia.org/wiki/Sørensen–Dice_coefficient>`_
     """
-    y_pred = tf.cast(y_pred > threshold, dtype=tf.float32) # Change to float32
+    y_pred = tf.cast(y_pred > threshold, dtype=tf.float32)
     y_true = tf.cast(y_true > threshold, dtype=tf.float32)
     inse = tf.reduce_sum(tf.multiply(y_pred, y_true), axis=axis)
     l = tf.reduce_sum(y_pred, axis=axis)
