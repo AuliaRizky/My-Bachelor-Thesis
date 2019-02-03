@@ -102,12 +102,12 @@ def main(args):
     if args.train:
         from train import train
         # Run training
-        train(args, eq_img_train, eq_img_val,  g_t_train, g_t_val, model_list[0], input_shape)
+        train(args, images_train, images_val,  g_t_train, g_t_val, model_list[0], input_shape)
 
     if args.test:
         from test import test
         # Run testing
-        test(args, images_test, g_t_tes, model_list[1], input_shape)
+        test(args, images_train, g_t_train, model_list[1], input_shape)
 
 
 if __name__ == '__main__':
