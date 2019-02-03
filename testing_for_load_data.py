@@ -282,12 +282,12 @@ def generate_test_batches(images_test, net_input_shape, batchSize=1, numSlices=1
         np.random.seed(None)
         subSampAmt = int(rand(1) * (images_test.shape[2] * 0.05))
 
-    for j in range(0,99):
+    while i < 1:
         if img_batch.ndim == 4:
-            img_batch[count, :, :, :] = images_test[:, :, 26:27:1]
+            img_batch[count, :, :, :] = images_test[:, :, 66:67:1]
         elif img_batch.ndim == 5:
             # Assumes img and mask are single channel. Replace 0 with : if multi-channel.
-            img_batch[count, :, :, :, 0] = images_test[:, :, 26:27:1]
+            img_batch[count, :, :, :, 0] = images_test[:, :, 66:67:1]
         else:
             logging.error('Error this function currently only supports 2D and 3D data.')
             exit(0)
@@ -296,6 +296,8 @@ def generate_test_batches(images_test, net_input_shape, batchSize=1, numSlices=1
         if count % batchSize == 0:
             count = 0
             yield (img_batch)
+        i += 1
 
     if count != 0:
         yield (img_batch[:count, :, :, :])
+        i += 1
