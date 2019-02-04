@@ -144,42 +144,28 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
             else:
                 output = output_array[:, :, :, 0]
 
-            '''output_img = sitk.GetImageFromArray(output)
-            print('Segmenting Output')
-            output_bin = threshold_mask(output, args.thresh_level)
-            output_mask = sitk.GetImageFromArray(output_bin)'''
-
             print(output.shape)
             output = np.rollaxis(output, 0, 3)
 
             print(output.shape)
 
-            plt.imshow(output[:, :, 0], cmap='gray')
+            plt.imshow(output[:, :, 0:1:1], cmap='gray')
             plt.show()
-
-            '''plt.imshow(output_mask, cmap='gray')
-            plt.show()
-
-            print('Saving Output')
-            sitk.WriteImage(output_img, join(raw_out_dir, str(i) + '_raw_output'))
-            sitk.WriteImage(output_mask, join(fin_out_dir, str(i) + '_final_output'))'''
-
-            # Load gt mask
 
             # Plot Qual Figure
             print('Creating Qualitative Figure for Quick Reference')
             f, ax = plt.subplots(1, 3, figsize=(15, 5))
 
             ax[0].imshow(images_test[:, :, 66:67:1], alpha=1, cmap='gray')
-            ax[0].imshow(output[:, :, :], alpha=0.5, cmap='Blues')
+            ax[0].imshow(output[:, :, 0:1:1], alpha=0.5, cmap='Blues')
             ax[0].imshow(gt_test[:, :, 66:67:1], alpha=0.2, cmap='Reds')
-            ax[0].set_title('Slice {}/{}'.format(images_test.shape[0] // 3, images_test.shape[0]))
+            ax[0].set_title('Slice {}/{}'.format(1, 19))
             ax[0].axis('off')
 
             ax[1].imshow(images_test[:, :, images_test.shape[0] // 2], alpha=1, cmap='gray')
             ax[1].imshow(output_bin[:, :, images_test.shape[0] // 2], alpha=0.5, cmap='Blues')
             ax[1].imshow(gt_test[:, :, images_test.shape[0] // 2], alpha=0.2, cmap='Reds')
-            ax[1].set_title('Slice {}/{}'.format(images_test.shape[0] // 2, images_test.shape[0]))
+            ax[1].set_title('Slice {}/{}'.format(2, 19))
             ax[1].axis('off')
 
             ax[2].imshow(images_test[:, :, images_test.shape[2] // 2 + images_test.shape[0] // 4], alpha=1, cmap='gray')
@@ -201,17 +187,17 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
             row = []
             if args.compute_dice:
                 print('Computing Dice')
-                dice_arr[i] = dc(output_bin, gt_test)
+                dice_arr[i] = dc(output, gt_test)
                 print('\tDice: {}'.format(dice_arr[i]))
                 row.append(dice_arr[i])
             if args.compute_jaccard:
                 print('Computing Jaccard')
-                jacc_arr[i] = jc(output_bin, gt_test)
+                jacc_arr[i] = jc(output, gt_test)
                 print('\tJaccard: {}'.format(jacc_arr[i]))
                 row.append(jacc_arr[i])
             if args.compute_assd:
                 print('Computing ASSD')
-                assd_arr[i] = assd(output_bin, gt_test, connectivity=1)
+                assd_arr[i] = assd(output, gt_test, connectivity=1)
                 print('\tASSD: {}'.format(assd_arr[i]))
                 row.append(assd_arr[i])
 
