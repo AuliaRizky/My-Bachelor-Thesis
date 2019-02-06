@@ -29,7 +29,7 @@ def get_loss(train_list, split, net, recon_wei, choice):
     elif choice == 'mar':
         loss = margin_loss(margin=0.4, downweight=0.5, pos_weight=1.0)
         
-    elif choice == 'bce':
+    elif choice == 'bce_dice':
         loss = bce_dice_loss
         
     elif choice == 'bce':
