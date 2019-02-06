@@ -119,7 +119,7 @@ if __name__ == '__main__':
     parser.add_argument('--split_num', type=int, default=0,
                         help='Which training split to train/test on.')
     parser.add_argument('--net', type=str.lower, default='segcapsr3',
-                       choices=['segcapsr3', 'segcapsr1', 'segcapsbasic', 'unet', 'tiramisu'],
+                       choices=['segcapsr3', 'segcapsr1', 'segcapsbasic', 'unet'],
                         help='Choose your network.')
     parser.add_argument('--train', type=int, default=1, choices=[0,1],
                         help='Set to 1 to enable training.')
@@ -131,7 +131,7 @@ if __name__ == '__main__':
                         help='Whether or not to shuffle the training data (both per epoch and in slice order.')
     parser.add_argument('--aug_data', type=int, default=1, choices=[0,1],
                        help='Whether or not to use data augmentation during training.')
-    parser.add_argument('--loss', type=str.lower, default='dice', choices=['bce', 'w_bce', 'dice', 'mar', 'w_mar'],
+    parser.add_argument('--loss', type=str.lower, default='dice', choices=['bce', 'bce_dice', 'w_bce', 'dice', 'mar', 'w_mar'],
                         help='Which loss to use. "bce" and "w_bce": unweighted and weighted binary cross entropy'
                              '"dice": soft dice coefficient, "mar" and "w_mar": unweighted and weighted margin loss.')
     parser.add_argument('--batch_size', type=int, default=1,
