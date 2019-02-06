@@ -19,17 +19,9 @@ from keras.utils import multi_gpu_model
 from keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping, ReduceLROnPlateau, TensorBoard
 import tensorflow as tf
 
-from custom_losses import dice_hard, weighted_binary_crossentropy_loss, dice_loss, margin_loss, dice_coef_loss
+from custom_losses import dice_hard, weighted_binary_crossentropy_loss, dice_loss, margin_loss, dice_coef_loss, bce_dice_loss
 from testing_for_load_data import generate_train_batches, generate_val_batches
 
-
-'''def load_class_w(train_list):
-    print('Class weight file {} not found.\nComputing class weights now. This may take '
-          'some time.'.format(class_weight_filename))
-    value = compute_class_weights(train_list)
-    np.save(class_weight_filename, value)
-    print('Finished computing class weights. This value has been saved for this training split.')
-    return value'''
 
 def get_loss(train_list, split, net, recon_wei, choice):
 
@@ -39,6 +31,9 @@ def get_loss(train_list, split, net, recon_wei, choice):
 
     elif choice == 'mar':
         loss = margin_loss(margin=0.4, downweight=0.5, pos_weight=1.0)
+        
+    elif choice == 'bce':
+        loss = bce_dice_loss
 
     else:
         raise Exception("Unknown loss_type")
