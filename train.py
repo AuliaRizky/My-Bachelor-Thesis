@@ -25,16 +25,12 @@ def get_loss(train_list, split, net, recon_wei, choice):
     if choice == 'dice':
         # loss = dice_loss
         loss = dice_coef_loss
-
     elif choice == 'mar':
-        loss = margin_loss(margin=0.4, downweight=0.5, pos_weight=1.0)
-        
+        loss = margin_loss(margin=0.4, downweight=0.5, pos_weight=1.0)        
     elif choice == 'bce_dice':
-        loss = bce_dice_loss
-        
+        loss = bce_dice_loss        
     elif choice == 'bce':
         loss = 'binary_crossentropy'    
-
     else:
         raise Exception("Unknown loss_type")
 
@@ -51,7 +47,7 @@ def get_callbacks(arguments):
 
     csv_logger = CSVLogger(('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation\logs.csv'), separator=',')
     tb = TensorBoard(arguments.tf_log_dir, batch_size=arguments.batch_size, histogram_freq=0)
-    model_checkpoint = ModelCheckpoint(join(arguments.check_dir, arguments.time + '.hdf5'),
+    model_checkpoint = ModelCheckpoint(join(arguments.check_dir, arguments.time + arguments.net + '.hdf5'),
                                        monitor=monitor_name, save_best_only=True, save_weights_only=True,
                                        verbose=1, mode='max')
     lr_reducer = ReduceLROnPlateau(monitor=monitor_name, factor=0.05, cooldown=0, patience=10,verbose=1, mode='max')
