@@ -31,6 +31,9 @@ def get_loss(train_list, split, net, recon_wei, choice):
         
     elif choice == 'bce':
         loss = bce_dice_loss
+        
+    elif choice == 'bce':
+        loss = 'binary_crossentropy'    
 
     else:
         raise Exception("Unknown loss_type")
