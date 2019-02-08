@@ -139,7 +139,6 @@ class ConvCapsuleLayer(layers.Layer):
         votes.set_shape((None, self.input_num_capsule, conv_height.value, conv_width.value,
                          self.num_capsule, self.num_atoms))
 
-        # logit_shape = [None, 1, 192, 192, 8]
         logit_shape = K.stack([
             input_shape[1], input_shape[0], votes_shape[1], votes_shape[2], self.num_capsule])
         biases_replicated = K.tile(self.b, [conv_height.value, conv_width.value, 1, 1])
