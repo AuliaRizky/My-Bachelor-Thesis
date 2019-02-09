@@ -127,6 +127,7 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
         writer.writerow(row)
 
         # indices = np.arange(0, images_test.shape[2], 1)
+        i = 0
         while i < 1:
             num_slices = 1
             output_array = eval_model.predict_generator(generate_test_batches(images_test,
@@ -149,28 +150,36 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
 
             print(output.shape)
 
-            plt.imshow(output[:, :, 0:1:1], cmap='gray')
+            plt.imshow(output[:, :, 0], cmap='gray')
             plt.show()
+
+            '''plt.imshow(output_mask, cmap='gray')
+            plt.show()
+            print('Saving Output')
+            sitk.WriteImage(output_img, join(raw_out_dir, str(i) + '_raw_output'))
+            sitk.WriteImage(output_mask, join(fin_out_dir, str(i) + '_final_output'))'''
+
+            # Load gt mask
 
             # Plot Qual Figure
             print('Creating Qualitative Figure for Quick Reference')
             f, ax = plt.subplots(1, 3, figsize=(15, 5))
 
-            ax[0].imshow(images_test[:, :, 66:67:1], alpha=1, cmap='gray')
-            ax[0].imshow(output[:, :, 0:1:1], alpha=0.5, cmap='Blues')
-            ax[0].imshow(gt_test[:, :, 66:67:1], alpha=0.2, cmap='Reds')
-            ax[0].set_title('Slice {}/{}'.format(1, 19))
+            ax[0].imshow(images_test[:, :, 67], alpha=1, cmap='gray')
+            ax[0].imshow(output[:, :, 0], alpha=0.5, cmap='Blues')
+            ax[0].imshow(gt_test[:, :, 67], alpha=0.2, cmap='Reds')
+            ax[0].set_title('Slice {}/{}'.format(images_test.shape[0] // 3, images_test.shape[0]))
             ax[0].axis('off')
 
             ax[1].imshow(images_test[:, :, images_test.shape[0] // 2], alpha=1, cmap='gray')
-            ax[1].imshow(output_bin[:, :, images_test.shape[0] // 2], alpha=0.5, cmap='Blues')
+            #ax[1].imshow(output_bin[:, :, images_test.shape[0] // 2], alpha=0.5, cmap='Blues')
             ax[1].imshow(gt_test[:, :, images_test.shape[0] // 2], alpha=0.2, cmap='Reds')
-            ax[1].set_title('Slice {}/{}'.format(2, 19))
+            ax[1].set_title('Slice {}/{}'.format(images_test.shape[0] // 2, images_test.shape[0]))
             ax[1].axis('off')
 
             ax[2].imshow(images_test[:, :, images_test.shape[2] // 2 + images_test.shape[0] // 4], alpha=1, cmap='gray')
-            ax[2].imshow(output_bin[:, :, images_test.shape[2] // 2 + images_test.shape[0] // 4], alpha=0.5,
-                         cmap='Blues')
+            #ax[2].imshow(output_bin[:, :, images_test.shape[2] // 2 + images_test.shape[0] // 4], alpha=0.5,
+            #             cmap='Blues')
             ax[2].imshow(gt_test[:, :, images_test.shape[2] // 2 + images_test.shape[0] // 4], alpha=0.2,
                          cmap='Reds')
             ax[2].set_title(
@@ -178,9 +187,9 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
             ax[2].axis('off')
 
             fig = plt.gcf()
-            fig.suptitle('images of %s' + i)
+            fig.suptitle('images of %s' + str(i))
 
-            plt.savefig(join(fig_out_dir, i + '_qual_fig' + '.png'),
+            plt.savefig(join(fig_out_dir, '_qual_fig' + '.png'),
                         format='png', bbox_inches='tight')
             plt.close('all')
 
@@ -213,4 +222,4 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
             row.append(np.mean(assd_arr))
         writer.writerow(row)
 
-print('Done.')
+    print('Done.')
