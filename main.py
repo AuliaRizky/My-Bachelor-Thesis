@@ -107,7 +107,7 @@ def main(args):
     if args.test:
         from test import test
         # Run testing
-        test(args, images_train, g_t_train, model_list[1], input_shape)
+        test(args, images_train, g_t_train, model_list, input_shape)
 
 
 if __name__ == '__main__':
