@@ -35,7 +35,7 @@ def get_loss(train_list, split, net, recon_wei, choice):
         raise Exception("Unknown loss_type")
 
     if net.find('caps') != -1:
-        return {'out_seg': loss, 'out_recon': 'mse'}, {'out_seg': 1.0, 'out_recon': recon_wei}
+        return {'out_seg': loss, 'out_recon': 'mse'}, {'out_seg': 1., 'out_recon': recon_wei}
     else:
         return loss, None
 
@@ -63,7 +63,7 @@ def compile_model(args, train_list, net_input_shape, uncomp_model):
     else:
         metrics = [dice_hard]
 
-    loss, loss_weighting = get_loss(train_list= train_list, split=args.split_num, net=args.net,
+    loss, loss_weighting = get_loss(train_list = train_list, split=args.split_num, net=args.net,
                                     recon_wei=args.recon_wei, choice=args.loss)
 
     # If using CPU or single GPU
