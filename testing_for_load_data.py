@@ -76,8 +76,12 @@ def equalize_image(image_train):
         eq_img.append(exposure.equalize_hist(image_train[:, :, i]))
     return np.stack(eq_img, axis=-1)
 
-# Credit to https://stackoverflow.com/users/3931936/losses-don
+def range_normalization(image):
+    image[image > 2048] = 2048
+    image /= 2048
+    return image
 
+# Credit to https://stackoverflow.com/users/3931936/losses-don
 def cropND(img, bounding):
     start = tuple(map(lambda a, da: a//2-da//2, img.shape, bounding))
     end = tuple(map(operator.add, start, bounding))
@@ -126,7 +130,8 @@ def read_and_process_data(data_dir):
                     print('currently getting the image of ADC')
 
                     for j in index:
-                        image_list.append(cropND(np.array(image[:, :, j:j+1:1].astype(np.float32)), (140, 140)))
+                        image_list.append(cropND(np.array(range_normalization(image[:, :, j:j+1:1].astype(np.float32))), 
+                                                 (140, 140)))
 
                     print('ADC has been gathered')
 
