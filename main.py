@@ -32,6 +32,7 @@ def main(args):
 
     # Load the data
     images, ground_truth = read_and_process_data(args.data_root_dir)
+    
 
     images_train = images[:, :, :475]
     images_val = images[:, :, 476:495:1]
