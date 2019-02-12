@@ -30,6 +30,7 @@ def CapsNetBasic(input_shape, n_class=2):
     
     # Last layer to do sigmoid 
     # final_out_seg = layers.Conv2D(filters=2, kernel_size=1, strides=1, padding='same', activation='sigmoid', name='final_out_seg')(out_seg)
+    # final_out_seg = layers.Conv2D(filters=1, kernel_size=1, strides=1, padding='same', activation='sigmoid', name='final_out_seg')(out_seg)
 
     # Decoder network.
     _, H, W, C, A = seg_caps.get_shape()
