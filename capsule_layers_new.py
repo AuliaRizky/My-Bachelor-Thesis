@@ -90,7 +90,7 @@ class Mask(layers.Layer):
 
 class ConvCapsuleLayer(layers.Layer):
     def __init__(self, kernel_size, num_capsule, num_atoms, strides=1, padding='same', routings=3,
-                 kernel_initializer='he_normal', **kwargs):
+                 kernel_initializer='glorot_uniform', **kwargs): # he_normal
         super(ConvCapsuleLayer, self).__init__(**kwargs)
         self.kernel_size = kernel_size
         self.num_capsule = num_capsule
