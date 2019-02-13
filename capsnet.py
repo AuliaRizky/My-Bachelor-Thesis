@@ -57,6 +57,10 @@ def CapsNetBasic(input_shape, n_class=2):
     train_model = models.Model(inputs=[x, y], outputs=[out_seg, shared_decoder(masked_by_y)])
     eval_model = models.Model(inputs=x, outputs=[out_seg, shared_decoder(masked)])
     
+    # Model for visualization  of activation layers
+    layer_outputs = [layer.output for layer in models.layers[:5]] # Extracts the outputs of the top 5 layers
+    activation_model = models.Model(inputs=x, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
+    
     # train_model = models.Model(inputs=[x, y], outputs=[final_out_seg, shared_decoder(masked_by_y)])
     # eval_model = models.Model(inputs=x, outputs=[final_out_seg, shared_decoder(masked)])
 
@@ -66,7 +70,7 @@ def CapsNetBasic(input_shape, n_class=2):
     masked_noised_y = Mask()([noised_seg_caps, y])
     manipulate_model = models.Model(inputs=[x, y, noise], outputs=shared_decoder(masked_noised_y))
 
-    return train_model, eval_model, manipulate_model
+    return train_model, eval_model, manipulate_model, activation_model
 
 def CapsNetR1(input_shape, n_class=2):
     x = layers.Input(shape=input_shape)
