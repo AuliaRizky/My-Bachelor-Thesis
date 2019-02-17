@@ -104,12 +104,16 @@ def main(args):
         from train import train
         # Run training
         train(args, images_train, images_val,  g_t_train, g_t_val, model_list[0], input_shape)
-
+     
     if args.test:
         from test import test
         # Run testing
         test(args, images_train, g_t_train, model_list, input_shape)
-
+    
+    if args.activation:
+        from activation import activation_layer
+        # Run training
+        activation_layer(args, images_train, model_list[2])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train on Medical Data')
@@ -126,6 +130,8 @@ if __name__ == '__main__':
                         help='Set to 1 to enable training.')
     parser.add_argument('--test', type=int, default=1, choices=[0,1],
                         help='Set to 1 to enable testing.')
+    parser.add_argument('--activation', type=int, default=0, choices=[0,1],
+                        help='Set to 1 to enable activation layer visualization.')
     parser.add_argument('--shuffle_data', type=int, default=1, choices=[0,1],
                         help='Whether or not to shuffle the training data (both per epoch and in slice order.')
     parser.add_argument('--aug_data', type=int, default=0, choices=[0,1],
