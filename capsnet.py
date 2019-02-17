@@ -58,7 +58,7 @@ def CapsNetBasic(input_shape, n_class=2):
     eval_model = models.Model(inputs=x, outputs=[out_seg, shared_decoder(masked)])
     
     # Model for visualization  of activation layers
-    layer_outputs = [layer.output for layer in models.layers[:5]] # Extracts the outputs of the top 5 layers
+    layer_outputs = [layer.output for layer in model.layers] # Extracts the outputs 
     activation_model = models.Model(inputs=x, outputs=layer_outputs) # Creates a model that will return these outputs, given the model input
     
     # train_model = models.Model(inputs=[x, y], outputs=[final_out_seg, shared_decoder(masked_by_y)])
