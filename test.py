@@ -189,7 +189,7 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
             fig = plt.gcf()
             fig.suptitle('images of %s' + str(i))
 
-            plt.savefig(join(fig_out_dir, '_qual_fig' + '.png'),
+            plt.savefig(join(fig_out_dir, '_qual_fig' + args.time + '.png'),
                         format='png', bbox_inches='tight')
             plt.close('all')
 
