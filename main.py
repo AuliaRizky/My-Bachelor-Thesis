@@ -123,7 +123,7 @@ if __name__ == '__main__':
                         help='/path/to/trained_model.hdf5 from root. Set to "" for none.')
     parser.add_argument('--split_num', type=int, default=0,
                         help='Which training split to train/test on.')
-    parser.add_argument('--net', type=str.lower, default='segcapsr3',
+    parser.add_argument('--net', type=str.lower, default='segcapbasic',
                        choices=['segcapsr3', 'segcapsr1', 'segcapsbasic', 'unet'],
                         help='Choose your network.')
     parser.add_argument('--train', type=int, default=1, choices=[0,1],
