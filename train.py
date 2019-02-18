@@ -47,7 +47,7 @@ def get_callbacks(arguments):
 
     csv_logger = CSVLogger(('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation\logs.csv'), separator=',')
     tb = TensorBoard(arguments.tf_log_dir, batch_size=arguments.batch_size, histogram_freq=0)
-    model_checkpoint = ModelCheckpoint(join(arguments.check_dir, arguments.time + arguments.net + '.hdf5'),
+    model_checkpoint = ModelCheckpoint(join(arguments.check_dir, args.output_name + '_model_' + args.time + '.hdf5'),
                                        monitor=monitor_name, save_best_only=True, save_weights_only=True,
                                        verbose=1, mode='max')
     lr_reducer = ReduceLROnPlateau(monitor=monitor_name, factor=0.95, cooldown=0, patience=10,verbose=1, mode='max')
