@@ -286,7 +286,7 @@ def generate_test_batches(images_test, net_input_shape, batchSize=1, numSlices=1
     elif subSampAmt == -1 and numSlices > 1:
         np.random.seed(None)
         subSampAmt = int(rand(1) * (images_test.shape[2] * 0.05))
-
+    i = 0
     while i < 1:
         if img_batch.ndim == 4:
             img_batch[count, :, :, :] = images_test[:, :, 66:67:1]
