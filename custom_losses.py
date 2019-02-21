@@ -5,17 +5,29 @@ Original Paper: https://arxiv.org/abs/1804.04241
 Code written by: Rodney LaLonde
 If you use significant portions of this code or the ideas from our paper, please cite it :)
 If you have any questions, please email me at lalonde@knights.ucf.edu.
-
 This file contains the definitions of custom loss functions not present in the default Keras.
 '''
 
 import tensorflow as tf
+from keras import backend as K
+from keras.losses import binary_crossentropy
 
-def dice_soft(y_true, y_pred, loss_type='sorensen', axis=[1,2,3], smooth=1e-5, from_logits=False):
+def dice_coef(y_true, y_pred, smooth=1e-5):
+    """
+    Dice = (2*|X & Y|)/ (|X|+ |Y|)
+         =  2*sum(|A*B|)/(sum(A^2)+sum(B^2))
+    ref: https://arxiv.org/pdf/1606.04797v1.pdf
+    """
+    intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
+    return (2. * intersection + smooth) / (K.sum(K.square(y_true),-1) + K.sum(K.square(y_pred),-1) + smooth)
+
+def dice_coef_loss(y_true, y_pred):
+    return 1-dice_coef(y_true, y_pred)
+
+def dice_soft(y_true, y_pred, loss_type='jaccard', axis=[1,2,3], smooth=1e-5, from_logits=False):
     """Soft dice (Sørensen or Jaccard) coefficient for comparing the similarity
     of two batch of data, usually be used for binary image segmentation
     i.e. labels are binary. The coefficient between 0 to 1, 1 means totally match.
-
     Parameters
     -----------
     y_pred : tensor
@@ -32,12 +44,10 @@ def dice_soft(y_true, y_pred, loss_type='sorensen', axis=[1,2,3], smooth=1e-5, f
         If either y_pred or y_true are empty (all pixels are background), dice = ```smooth/(small_value + smooth)``,
         then if smooth is very small, dice close to 0 (even the image values lower than the threshold),
         so in this case, higher smooth can have a higher dice.
-
     Examples
     ---------
     >>> outputs = tl.act.pixel_wise_softmax(network.outputs)
     >>> dice_loss = 1 - tl.cost.dice_coe(outputs, y_)
-
     References
     -----------
     - `Wiki-Dice <https://en.wikipedia.org/wiki/Sørensen–Dice_coefficient>`_
@@ -46,8 +56,8 @@ def dice_soft(y_true, y_pred, loss_type='sorensen', axis=[1,2,3], smooth=1e-5, f
     if not from_logits:
         # transform back to logits
         _epsilon = tf.convert_to_tensor(1e-7, y_pred.dtype.base_dtype)
-        y_pred = tf.clip_by_value(y_pred, _epsilon, 1 - _epsilon)   # Every value less than _epsilon are set to _epsilon and so for the 1 - _epsilon
-        y_pred = tf.log(y_pred / (1 - y_pred))  # Every element in tensor ar set to log e(x)
+        y_pred = tf.clip_by_value(y_pred, _epsilon, 1 - _epsilon)
+        y_pred = tf.log(y_pred / (1 - y_pred))
 
     inse = tf.reduce_sum(y_pred * y_true, axis=axis)
     if loss_type == 'jaccard':
@@ -73,7 +83,6 @@ def dice_hard(y_true, y_pred, threshold=0.5, axis=[1,2,3], smooth=1e-5):
     """Non-differentiable Sørensen–Dice coefficient for comparing the similarity
     of two batch of data, usually be used for binary image segmentation i.e. labels are binary.
     The coefficient between 0 to 1, 1 if totally match.
-
     Parameters
     -----------
     y_pred : tensor
@@ -86,12 +95,11 @@ def dice_hard(y_true, y_pred, threshold=0.5, axis=[1,2,3], smooth=1e-5):
         All dimensions are reduced, default ``[1,2,3]``.
     smooth : float
         This small value will be added to the numerator and denominator, see ``dice_coe``.
-
     References
     -----------
     - `Wiki-Dice <https://en.wikipedia.org/wiki/Sørensen–Dice_coefficient>`_
     """
-    y_pred = tf.cast(y_pred > threshold, dtype=tf.float32) # Change to float32
+    y_pred = tf.cast(y_pred > threshold, dtype=tf.float32)
     y_true = tf.cast(y_true > threshold, dtype=tf.float32)
     inse = tf.reduce_sum(tf.multiply(y_pred, y_true), axis=axis)
     l = tf.reduce_sum(y_pred, axis=axis)
@@ -106,9 +114,11 @@ def dice_hard(y_true, y_pred, threshold=0.5, axis=[1,2,3], smooth=1e-5):
     hard_dice = tf.reduce_mean(hard_dice)
     return hard_dice
 
-
 def dice_loss(y_true, y_pred, from_logits=False):
     return 1-dice_soft(y_true, y_pred, from_logits=False)
+
+def bce_dice_loss(y_true, y_pred):
+    return binary_crossentropy(y_true, y_pred) + dice_loss(y_true, y_pred)
 
 def weighted_binary_crossentropy_loss(pos_weight):
     # pos_weight: A coefficient to use on the positive examples.
@@ -146,16 +156,12 @@ def margin_loss(margin=0.4, downweight=0.5, pos_weight=1.0):
 
     def _margin_loss(labels, raw_logits):
         """Penalizes deviations from margin for each logit.
-
         Each wrong logit costs its distance to margin. For negative logits margin is
         0.1 and for positives it is 0.9. First subtract 0.5 from all logits. Now
         margin is 0.4 from each side.
-
         Args:
         labels: tensor, one hot encoding of ground truth.
         raw_logits: tensor, model predictions in range [0, 1]
-
-
         Returns:
         A tensor with cost for each data point of shape [batch_size].
         """
@@ -167,4 +173,3 @@ def margin_loss(margin=0.4, downweight=0.5, pos_weight=1.0):
         return 0.5 * positive_cost + downweight * 0.5 * negative_cost
 
     return _margin_loss
-

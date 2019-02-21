@@ -19,12 +19,9 @@ Tasks:
     ./data/np_files and training (and testing) file lists under ./data/split_list folders.
     You need to remove these two folders every time if you want to replace your training image and mask files.
     The program will only read data from np_files folders.
-
 Data:
     MS COCO 2017 or LUNA 2016 were tested on this package.
     You can leverage your own data set but the mask images should follow the format of MS COCO or with background color = 0 on each channel.
-
-
 Enhancement:
     1. Porting to Python version 3.6
     2. Remove program code cleaning
@@ -36,6 +33,7 @@ import os
 import nibabel as nib
 import numpy as np
 import logging
+import operator
 from keras import backend as K
 K.set_image_data_format('channels_last')
 from skimage import exposure
@@ -76,7 +74,19 @@ def equalize_image(image_train):
     index = np.arange(0, image_train.shape[2], 1)
     for i in index:
         eq_img.append(exposure.equalize_hist(image_train[:, :, i]))
-    return np.stack(eq_img, axis=2)
+    return np.stack(eq_img, axis=-1)
+
+def range_normalization(image):
+    image[image > 2048] = 2048
+    image /= 2048
+    return image
+
+# Credit to https://stackoverflow.com/users/3931936/losses-don
+def cropND(img, bounding):
+    start = tuple(map(lambda a, da: a//2-da//2, img.shape, bounding))
+    end = tuple(map(operator.add, start, bounding))
+    slices = tuple(map(slice, start, end))
+    return img[slices]
 
 def get_extension(filename):
     filename, extension = os.path.splitext(filename)
@@ -120,14 +130,15 @@ def read_and_process_data(data_dir):
                     print('currently getting the image of ADC')
 
                     for j in index:
-                        image_list.append(np.array(image[:, :, j:j+1:2].astype(np.float32)))
+                        image_list.append(cropND(np.array(range_normalization(image[:, :, j:j+1:1].astype(np.float32))),
+                                                 (140, 140)))
 
                     print('ADC has been gathered')
 
                 if image_type == '.OT':
                     print('currently getting the image of Ground Truth')
                     for j in index:
-                        ground_truth_list.append(np.array(image[:, :, j:j+1:2].astype(np.float32)))
+                        ground_truth_list.append(cropND(np.array(image[:, :, j:j+1:1].astype(np.float32)), (140,140)))
 
                     print('the image of Ground Truth has been sliced')
 
@@ -139,10 +150,10 @@ def read_and_process_data(data_dir):
             else:
                 continue
     # Do split here
-    image_all = np.concatenate(image_list, axis=2)
-    ground_truth_all = np.concatenate(ground_truth_list, axis=2)
+    image_all = np.concatenate(image_list, axis=-1)
+    ground_truth_all = np.concatenate(ground_truth_list, axis=-1)
 
-    return image_all, ground_truth_all, image_list, ground_truth_list
+    return image_all, ground_truth_all
 
 @threadsafe_generator
 def generate_train_batches(image, ground_truth, net_input_shape, net, batchSize=1, numSlices=1, subSampAmt=-1, stride=1, shuff=1, aug_data=1):
@@ -157,24 +168,14 @@ def generate_train_batches(image, ground_truth, net_input_shape, net, batchSize=
 
         count = 0
 
-        # the image_list produce lit of image that consist ADC in list
-        # image_list[0] = image ADC with shape of [192,192,19] and so on
-
-
         if numSlices == 1:
             subSampAmt = 0
         elif subSampAmt == -1 and numSlices > 1:
             np.random.seed(None)
             subSampAmt = int(rand(1) * (369 * 0.05))
 
-        # indicies = np.arange(0, 369 - numSlices * (subSampAmt + 1) + 1, stride) # revisi ini
-        indicies = np.arange(26, 27, stride)
-
-        if shuff:
-            shuffle(indicies)
-
-        for j in indicies:
-            if not np.any(ground_truth[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]):
+        for j in range(0, 99):
+            if not np.any(ground_truth[:, :, 66:67:1]):
                 continue
 
             # insert the img_batch from image_data for train where took all the [:, :, x:y:z]
@@ -183,12 +184,12 @@ def generate_train_batches(image, ground_truth, net_input_shape, net, batchSize=
             # for next j=1, take all [:,:, 1:2:1]
             # for j=10, take all [:,:, 10:11:1]
             if img_batch.ndim == 4:
-                img_batch[count, :, :, :] = image[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
-                mask_batch[count, :, :, :] = ground_truth[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
+                img_batch[count, :, :, :] = image[:, :, 66:67:1]
+                mask_batch[count, :, :, :] = ground_truth[:, :, 66:67:1]
             elif img_batch.ndim == 5:
                 # Assumes img and mask are single channel. Replace 0 with : if multi-channel.
-                img_batch[count, :, :, :, 0] = image[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
-                mask_batch[count, :, :, :, 0] = ground_truth[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
+                img_batch[count, :, :, :, 0] = image[:, :, 66:67:1]
+                mask_batch[count, :, :, :, 0] = ground_truth[:, :, 66:67:1]
             else:
                 logging.error('\nError this function currently only supports 2D and 3D data.')
                 exit(0)
@@ -240,22 +241,16 @@ def generate_val_batches(val_list, gt_val_list, net_input_shape, net, batchSize=
             np.random.seed(None)
             subSampAmt = int(rand(1) * 527 * 0.05)
 
-        indicies = np.arange(370, 475 - numSlices * (subSampAmt + 1) + 1, stride)
-        #index = np.arange(0, len(val_list) - 1, 1)
-
-        if shuff:
-            shuffle(indicies)
-            # shuffle(index)
-        for j in indicies:
-            if not np.any(gt_val_list[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]):
+        for j in range(0, 19):
+            if not np.any(gt_val_list[:, :, 66:67:1]):
                 continue
             if img_batch.ndim == 4:
-                img_batch[count, :, :, :] = val_list[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
-                mask_batch[count, :, :, :] = gt_val_list[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
+                img_batch[count, :, :, :] = val_list[:, :, 66:67:1]
+                mask_batch[count, :, :, :] = gt_val_list[:, :, 66:67:1]
             elif img_batch.ndim == 5:
                 # Assumes img and mask are single channel. Replace 0 with : if multi-channel.
-                img_batch[count, :, :, :, 0] = val_list[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
-                mask_batch[count, :, :, :, 0] = gt_val_list[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
+                img_batch[count, :, :, :, 0] = val_list[:, :, 66:67:1]
+                mask_batch[count, :, :, :, 0] = gt_val_list[:, :, 66:67:1]
             else:
                 logging.error('\nError this function currently only supports 2D and 3D data.')
                 exit(0)
@@ -291,14 +286,13 @@ def generate_test_batches(images_test, net_input_shape, batchSize=1, numSlices=1
     elif subSampAmt == -1 and numSlices > 1:
         np.random.seed(None)
         subSampAmt = int(rand(1) * (images_test.shape[2] * 0.05))
-
-    indicies = np.arange(0, images_test.shape[2] - numSlices * (subSampAmt + 1) + 1, stride)
-    for j in indicies:
+    i = 0
+    while i < 1:
         if img_batch.ndim == 4:
-            img_batch[count, :, :, :] = images_test[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
+            img_batch[count, :, :, :] = images_test[:, :, 66:67:1]
         elif img_batch.ndim == 5:
             # Assumes img and mask are single channel. Replace 0 with : if multi-channel.
-            img_batch[count, :, :, :, 0] = images_test[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
+            img_batch[count, :, :, :, 0] = images_test[:, :, 66:67:1]
         else:
             logging.error('Error this function currently only supports 2D and 3D data.')
             exit(0)
@@ -307,7 +301,8 @@ def generate_test_batches(images_test, net_input_shape, batchSize=1, numSlices=1
         if count % batchSize == 0:
             count = 0
             yield (img_batch)
+        i += 1
 
     if count != 0:
         yield (img_batch[:count, :, :, :])
-
+        i += 1
