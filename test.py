@@ -185,9 +185,9 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
             ax[2].axis('off')
 
             fig = plt.gcf()
-            fig.suptitle('images of %s' + str(i))
+            fig.suptitle('Qualitative Segmented Images')
 
-            plt.savefig(join(fig_out_dir, '_qual_fig' + '.png'),
+            plt.savefig(join(fig_out_dir, args.time + '_qual_fig' + '.png'),
                         format='png', bbox_inches='tight')
             plt.close('all')
 
