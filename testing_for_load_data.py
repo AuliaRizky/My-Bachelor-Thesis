@@ -19,12 +19,9 @@ Tasks:
     ./data/np_files and training (and testing) file lists under ./data/split_list folders.
     You need to remove these two folders every time if you want to replace your training image and mask files.
     The program will only read data from np_files folders.
-
 Data:
     MS COCO 2017 or LUNA 2016 were tested on this package.
     You can leverage your own data set but the mask images should follow the format of MS COCO or with background color = 0 on each channel.
-
-
 Enhancement:
     1. Porting to Python version 3.6
     2. Remove program code cleaning
@@ -36,17 +33,14 @@ import os
 import nibabel as nib
 import numpy as np
 import logging
+import operator
 from keras import backend as K
 K.set_image_data_format('channels_last')
 from skimage import exposure
-
-from os.path import join, basename
-from os import makedirs
+from sklearn.model_selection import train_test_split
+from os.path import join
 from custom_data_aug import augmentImages
-
 from numpy.random import rand, shuffle
-import SimpleITK as sitk
-
 import matplotlib.pyplot as plt
 
 from threadsafe import threadsafe_generator
@@ -76,7 +70,23 @@ def equalize_image(image_train):
     index = np.arange(0, image_train.shape[2], 1)
     for i in index:
         eq_img.append(exposure.equalize_hist(image_train[:, :, i]))
-    return np.stack(eq_img, axis=2)
+    return np.stack(eq_img, axis=-1)
+
+def range_normalization(image):
+    image[image > 2048] = 2048
+    image /= 2048
+    return image
+
+# Credit to https://stackoverflow.com/users/3931936/losses-don
+def cropND(img, bounding):
+    start = tuple(map(lambda a, da: a // 2 - da // 2, img.shape, bounding))
+    end = tuple(map(operator.add, start, bounding))
+    slices = tuple(map(slice, start, end))
+    return img[slices]
+
+def reduce_slice(image, up_slice, down_slice):
+    image = image[:, :, up_slice - 1:image.shape[2] - down_slice:1]
+    return image
 
 def get_extension(filename):
     filename, extension = os.path.splitext(filename)
@@ -101,7 +111,6 @@ def read_and_process_data(data_dir):
         data[folder] = {}
         for sub_folder in get_sub_folder(os.path.join(data_dir, folder)):
             image_type = get_image_type_from_folder_name(sub_folder)
-
             if image_type == '.MR_4DPWI':
                 continue
             path = os.path.join(data_dir, folder, sub_folder)
@@ -111,108 +120,177 @@ def read_and_process_data(data_dir):
             im = nib.load(path, mmap = False)
             image = im.get_fdata()
 
-            # print(image.shape[0])
-            # height, _, slice_num = image.shape
+            folder_dict = {"training_28": [7, 4], "training_30": [5, 6], "training_31": [7, 4], "training_32": [5, 6],
+                           "training_33": [6, 5], "training_35": [7, 4], "training_8": [2, 1]}
+
             # If the pixel size is 192 do this
-            index = np.arange(0, image.shape[2], 1)
             if image.shape[0] == 192:
-                if image_type == '.MR_ADC':
-                    print('currently getting the image of ADC')
+                if image.shape[2] == 30 or image.shape[2] == 24:
+                    if image_type == '.MR_ADC':
+                        print('currently getting the image of ADC')
+                        image_slice = []
+                        up_slice = folder_dict.get(str(folder))[0]
+                        down_slice = folder_dict.get(str(folder))[1]
 
-                    for j in index:
-                        image_list.append(np.array(image[:, :, j:j+1:2].astype(np.float32)))
+                        image = reduce_slice(range_normalization(np.array(image)), up_slice + 1, down_slice + 1)
+                        for slice_num in range(0, image.shape[2]-1, 1):
+                            image_slice.append(np.fliplr(cropND(image[:, :, slice_num:slice_num+1:1],
+                                                      (140, 140))))
+                        image_list.append(np.concatenate(image_slice, axis=-1))
 
-                    print('ADC has been gathered')
+                        print('ADC has been gathered')
 
-                if image_type == '.OT':
-                    print('currently getting the image of Ground Truth')
-                    for j in index:
-                        ground_truth_list.append(np.array(image[:, :, j:j+1:2].astype(np.float32)))
+                    if image_type == '.OT':
+                        print('currently getting the image of Ground Truth')
 
-                    print('the image of Ground Truth has been sliced')
+                        image_slice = []
+                        up_slice = folder_dict.get(str(folder))[0]
+                        down_slice = folder_dict.get(str(folder))[1]
 
+                        image = reduce_slice(np.array(image), up_slice + 1, down_slice + 1)
+                        for slice_num in range(0, image.shape[2] - 1, 1):
+                            image_slice.append(np.fliplr(cropND(image[:, :, slice_num:slice_num + 1:1],
+                                                      (140, 140))))
+                        ground_truth_list.append(np.concatenate(image_slice, axis=-1))
+
+                        print('the image of Ground Truth has been sliced')
                 else:
-                    continue
+                    if image_type == '.MR_ADC':
+                        print('currently getting the image of ADC')
+                        image_slice = []
+                        for slice_num in range(0, image.shape[2], 1):
+                            image_slice.append(cropND(range_normalization(image[:, :, slice_num:slice_num + 1:1]),
+                                                      (140, 140)))
+                        image_list.append(np.concatenate(image_slice, axis=-1))
+
+                        print('ADC has been gathered')
+
+                    if image_type == '.OT':
+                        image_slice = []
+                        print('currently getting the image of Ground Truth')
+                        for slice_num in range(0, image.shape[2], 1):
+                            image_slice.append(cropND(image[:, :, slice_num:slice_num + 1:1],
+                                                      (140, 140)))
+                        ground_truth_list.append(np.concatenate(image_slice, axis=-1))
+                        print('the image of Ground Truth has been sliced')
+
+            else:
+                continue
 
             # If needed, for other pixel size do resize in this section
             # For now just continue
-            else:
-                continue
-    # Do split here
-    image_all = np.concatenate(image_list, axis=2)
-    ground_truth_all = np.concatenate(ground_truth_list, axis=2)
 
-    return image_all, ground_truth_all, image_list, ground_truth_list
+    return image_list, ground_truth_list
+
+def generate_train_test(images, gt_images, random_num):
+    index_image_list = list(range(0, len(images), 1))
+    index_gt_list = list(range(0, len(images), 1))
+
+    index_train, index_test, gt_train, gt_test = train_test_split(index_image_list, index_gt_list,
+                                                                  test_size=0.125,
+                                                                  random_state=random_num)
+    images_train = []
+    gt_train = []
+    images_test = []
+    gt_test = []
+    print(index_train)
+    print(index_test)
+    for i in index_train:
+        images_train.append(images[i])
+        gt_train.append(gt_images[i])
+    for j in index_test:
+        images_test.append(images[j])
+        gt_test.append(images[j])
+
+    return images_train, images_test, gt_train, gt_test
+
+def generate_train_val(images, gt_images, random_num):
+    index_image_list = list(range(0, len(images), 1))
+    index_gt_list = list(range(0, len(images), 1))
+
+    index_train, index_val, gt_train, gt_val = train_test_split(index_image_list, index_gt_list,
+                                                                  test_size = 0.15,
+                                                                  random_state = random_num)
+    images_train = []
+    gt_train = []
+    images_val = []
+    gt_val = []
+    for i in index_train:
+        images_train.append(images[i])
+        gt_train.append(gt_images[i])
+    for j in index_val:
+        images_val.append(images[j])
+        gt_val.append(images[j])
+
+    return images_train, images_val, gt_train, gt_val
 
 @threadsafe_generator
-def generate_train_batches(image, ground_truth, net_input_shape, net, batchSize=1, numSlices=1, subSampAmt=-1, stride=1, shuff=1, aug_data=1):
-    # create placeholders for training data
-    # (image_shape[1], img_shape[2], args.slices)
-    # the shape of input is [192,192,args.slices]
+def generate_train_batches(images, ground_truth, net_input_shape, net, batchSize=1, numSlices=1,
+                           subSampAmt=-1,
+                           stride=1,
+                           shuff=1,
+                           aug_data=1):
 
+    # create placeholders for training data
     img_batch = np.zeros((np.concatenate(((batchSize,), net_input_shape))), dtype=np.float32)
     mask_batch = np.zeros((np.concatenate(((batchSize,), net_input_shape))), dtype=np.uint8)
 
     while True:
 
         count = 0
+        for i in range(0, len(images), 1):
+            image = images[i]
+            g_t_image = ground_truth[i]
 
-        # the image_list produce lit of image that consist ADC in list
-        # image_list[0] = image ADC with shape of [192,192,19] and so on
+            if numSlices == 1:
+                subSampAmt = 0
+            elif subSampAmt == -1 and numSlices > 1:
+                np.random.seed(None)
+                subSampAmt = int(rand(1) * (image.shape[2] * 0.05))
 
+            indexes = np.arange(0, image.shape[2] - numSlices * (subSampAmt + 1) + 1, stride)
+            if shuff:
+                shuffle(indexes)
 
-        if numSlices == 1:
-            subSampAmt = 0
-        elif subSampAmt == -1 and numSlices > 1:
-            np.random.seed(None)
-            subSampAmt = int(rand(1) * (369 * 0.05))
+            for j in indexes:
+                if not np.any(g_t_image[:, :, j:j + numSlices * (subSampAmt+1):subSampAmt+1]):
+                    continue
 
-        # indicies = np.arange(0, 369 - numSlices * (subSampAmt + 1) + 1, stride) # revisi ini
-        indicies = np.arange(26, 27, stride)
-
-        if shuff:
-            shuffle(indicies)
-
-        for j in indicies:
-            if not np.any(ground_truth[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]):
-                continue
-
-            # insert the img_batch from image_data for train where took all the [:, :, x:y:z]
-            # x starting index, y stop index, z how much step it takes
-            # where x:y:z implied that the slice say, j=0, numslices=1, subsampamt=0, take all [:,:, 0:1:1]
-            # for next j=1, take all [:,:, 1:2:1]
-            # for j=10, take all [:,:, 10:11:1]
-            if img_batch.ndim == 4:
-                img_batch[count, :, :, :] = image[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
-                mask_batch[count, :, :, :] = ground_truth[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
-            elif img_batch.ndim == 5:
-                # Assumes img and mask are single channel. Replace 0 with : if multi-channel.
-                img_batch[count, :, :, :, 0] = image[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
-                mask_batch[count, :, :, :, 0] = ground_truth[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
-            else:
-                logging.error('\nError this function currently only supports 2D and 3D data.')
-                exit(0)
-
-            count += 1
-            if count % batchSize == 0:
-                count = 0
-                if aug_data:
-                    img_batch, mask_batch = augmentImages(img_batch, mask_batch)
-                if debug:
-                    if img_batch.ndim == 4:
-                        plt.imshow(np.squeeze(img_batch[0, :, :, 0]), cmap='gray')
-                        plt.imshow(np.squeeze(mask_batch[0, :, :, 0]), alpha=0.15)
-                    elif img_batch.ndim == 5:
-                        plt.imshow(np.squeeze(img_batch[0, :, :, 0, 0]), cmap='gray')
-                        plt.imshow(np.squeeze(mask_batch[0, :, :, 0, 0]), alpha=0.15)
-                    plt.savefig(join('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation', 'logs', 'ex_train.png'), format='png', bbox_inches='tight')
-                    plt.close()
-                if net.find('caps') != -1:  # if the network is capsule/segcaps structure
-                    # This part multiply each element between them
-                    # Maybe to produce segmented image
-                    yield ([img_batch, mask_batch], [mask_batch, mask_batch * img_batch])
+                # insert the img_batch from image_data for train where took all the [:, :, x:y:z]
+                # x starting index, y stop index, z how much step it takes
+                # where x:y:z implied that the slice say, j=0, numslices=1, subsampamt=0, take all [:,:, 0:1:1]
+                # for next j=1, take all [:,:, 1:2:1]
+                # for j=10, take all [:,:, 10:11:1]
+                if img_batch.ndim == 4:
+                    img_batch[count, :, :, :] = image[:, :, j:j + numSlices * (subSampAmt+1):subSampAmt+1]
+                    mask_batch[count, :, :, :] = g_t_image[:, :, j:j + numSlices * (subSampAmt+1):subSampAmt+1]
+                elif img_batch.ndim == 5:
+                    # Assumes img and mask are single channel. Replace 0 with : if multi-channel.
+                    img_batch[count, :, :, :, 0] = image[:, :, j:j + numSlices * (subSampAmt+1):subSampAmt+1]
+                    mask_batch[count, :, :, :, 0] = g_t_image[:, :, j:j + numSlices * (subSampAmt+1):subSampAmt+1]
                 else:
-                    yield (img_batch, mask_batch)
+                    logging.error('\nError this function currently only supports 2D and 3D data.')
+                    exit(0)
+
+                count += 1
+                if count % batchSize == 0:
+                    count = 0
+                    if aug_data:
+                        img_batch, mask_batch = augmentImages(img_batch, mask_batch)
+                    if debug:
+                        if img_batch.ndim == 4:
+                            plt.imshow(np.squeeze(img_batch[0, :, :, 0]), cmap='gray')
+                            plt.imshow(np.squeeze(mask_batch[0, :, :, 0]), alpha=0.15)
+                        elif img_batch.ndim == 5:
+                            plt.imshow(np.squeeze(img_batch[0, :, :, 0, 0]), cmap='gray')
+                            plt.imshow(np.squeeze(mask_batch[0, :, :, 0, 0]), alpha=0.15)
+                        plt.savefig(join('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation', 'logs',
+                                         'ex_train.png'), format='png', bbox_inches='tight')
+                        plt.close()
+                    if net.find('caps') != -1:  # if the network is capsule/segcaps structure
+                        yield ([img_batch, mask_batch], [mask_batch, mask_batch * img_batch])
+                    else:
+                        yield (img_batch, mask_batch)
 
         if count != 0:
             if aug_data:
@@ -224,6 +302,7 @@ def generate_train_batches(image, ground_truth, net_input_shape, net, batchSize=
             else:
                 yield (img_batch[:count, ...], mask_batch[:count, ...])
 
+
 @threadsafe_generator
 def generate_val_batches(val_list, gt_val_list, net_input_shape, net, batchSize=1, numSlices=1, subSampAmt=-1,
                          stride=1, downSampAmt=1, shuff=1):
@@ -232,43 +311,42 @@ def generate_val_batches(val_list, gt_val_list, net_input_shape, net, batchSize=
     mask_batch = np.zeros((np.concatenate(((batchSize,), net_input_shape))), dtype=np.uint8)
 
     while True:
-
         count = 0
-        if numSlices == 1:
-            subSampAmt = 0
-        elif subSampAmt == -1 and numSlices > 1:
-            np.random.seed(None)
-            subSampAmt = int(rand(1) * 527 * 0.05)
+        for i in range(0, len(val_list), 1):
+            val_image = val_list[i]
+            gt_val_image = gt_val_list[i]
 
-        indicies = np.arange(370, 475 - numSlices * (subSampAmt + 1) + 1, stride)
-        #index = np.arange(0, len(val_list) - 1, 1)
+            if numSlices == 1:
+                subSampAmt = 0
+            elif subSampAmt == -1 and numSlices > 1:
+                np.random.seed(None)
+                subSampAmt = int(rand(1) * (val_image.shape[2] * 0.05))
 
-        if shuff:
-            shuffle(indicies)
-            # shuffle(index)
-        for j in indicies:
-            if not np.any(gt_val_list[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]):
-                continue
-            if img_batch.ndim == 4:
-                img_batch[count, :, :, :] = val_list[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
-                mask_batch[count, :, :, :] = gt_val_list[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
-            elif img_batch.ndim == 5:
-                # Assumes img and mask are single channel. Replace 0 with : if multi-channel.
-                img_batch[count, :, :, :, 0] = val_list[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
-                mask_batch[count, :, :, :, 0] = gt_val_list[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
-            else:
-                logging.error('\nError this function currently only supports 2D and 3D data.')
-                exit(0)
+            indexes = np.arange(0, val_image.shape[2] - numSlices * (subSampAmt + 1) + 1, stride)
+            if shuff:
+                shuffle(indexes)
 
-            count += 1
-            if count % batchSize == 0:
-                count = 0
-                if net.find('caps') != -1:
-                    yield ([img_batch, mask_batch], [mask_batch, mask_batch * img_batch])
+            for j in indexes:
+                if not np.any(gt_val_image[:, :, j:j + numSlices * (subSampAmt+1):subSampAmt+1]):
+                    continue
+                if img_batch.ndim == 4:
+                    img_batch[count, :, :, :] = val_image[:, :, j:j + numSlices * (subSampAmt+1):subSampAmt+1]
+                    mask_batch[count, :, :, :] = gt_val_image[:, :, j:j + numSlices * (subSampAmt+1):subSampAmt+1]
+                elif img_batch.ndim == 5:
+                    # Assumes img and mask are single channel. Replace 0 with : if multi-channel.
+                    img_batch[count, :, :, :, 0] = val_image[:, :, j:j + numSlices * (subSampAmt+1):subSampAmt+1]
+                    mask_batch[count, :, :, :, 0] = gt_val_image[:, :, j:j + numSlices * (subSampAmt+1):subSampAmt+1]
                 else:
-                    yield (img_batch, mask_batch)
+                    logging.error('\nError this function currently only supports 2D and 3D data.')
+                    exit(0)
 
-
+                count += 1
+                if count % batchSize == 0:
+                    count = 0
+                    if net.find('caps') != -1:
+                        yield ([img_batch, mask_batch], [mask_batch, mask_batch * img_batch])
+                    else:
+                        yield (img_batch, mask_batch)
 
         if count != 0:
             if net.find('caps') != -1:
@@ -277,7 +355,6 @@ def generate_val_batches(val_list, gt_val_list, net_input_shape, net, batchSize=
             else:
                 yield (img_batch[:count, ...], mask_batch[:count, ...])
 
-# FOR TEST
 
 @threadsafe_generator
 def generate_test_batches(images_test, net_input_shape, batchSize=1, numSlices=1, subSampAmt=0,
@@ -285,15 +362,16 @@ def generate_test_batches(images_test, net_input_shape, batchSize=1, numSlices=1
     # Create placeholders for testing
     logging.info('\nload_3D_data.generate_test_batches')
     img_batch = np.zeros((np.concatenate(((batchSize,), net_input_shape))), dtype=np.float32)
+
     count = 0
     if numSlices == 1:
         subSampAmt = 0
     elif subSampAmt == -1 and numSlices > 1:
         np.random.seed(None)
         subSampAmt = int(rand(1) * (images_test.shape[2] * 0.05))
+    indexes = np.arange(0, images_test.shape[2] - numSlices * (subSampAmt + 1) + 1, stride)
 
-    indicies = np.arange(0, images_test.shape[2] - numSlices * (subSampAmt + 1) + 1, stride)
-    for j in indicies:
+    for j in indexes:
         if img_batch.ndim == 4:
             img_batch[count, :, :, :] = images_test[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
         elif img_batch.ndim == 5:
@@ -310,4 +388,3 @@ def generate_test_batches(images_test, net_input_shape, batchSize=1, numSlices=1
 
     if count != 0:
         yield (img_batch[:count, :, :, :])
-
