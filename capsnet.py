@@ -37,7 +37,10 @@ def CapsNetBasic(input_shape, n_class=2):
     y = layers.Input(shape=input_shape[:-1] + (1,))
     masked_by_y = Mask()([seg_caps, y])  # The true label is used to mask the output of capsule layer. For training
     masked = Mask()(seg_caps)  # Mask using the capsule with maximal length. For prediction
-
+    
+    # masked_by_y = Mask()([out_seg_1, y])
+    # masked = Mask()(out_seg_1)
+    
     def shared_decoder(mask_layer):
         recon_remove_dim = layers.Reshape((H.value, W.value, A.value))(mask_layer)
 
