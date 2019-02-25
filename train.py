@@ -7,7 +7,7 @@ plt.ioff()
 
 from os.path import join
 import numpy as np
-import datetime
+
 
 from keras.optimizers import Adam
 from keras import backend as K
@@ -19,18 +19,16 @@ import tensorflow as tf
 from custom_losses import dice_hard, weighted_binary_crossentropy_loss, dice_loss, margin_loss, dice_coef_loss, bce_dice_loss
 from testing_for_load_data import generate_train_batches, generate_val_batches
 
-
 def get_loss(train_list, split, net, recon_wei, choice):
 
     if choice == 'dice':
-        # loss = dice_loss
-        loss = dice_coef_loss
+        loss = dice_loss
     elif choice == 'mar':
-        loss = margin_loss(margin=0.4, downweight=0.5, pos_weight=1.0)        
+        loss = margin_loss(margin=0.4, downweight=0.5, pos_weight=1.0)
     elif choice == 'bce_dice':
-        loss = bce_dice_loss        
+        loss = bce_dice_loss
     elif choice == 'bce':
-        loss = 'binary_crossentropy'    
+        loss = 'binary_crossentropy'
     else:
         raise Exception("Unknown loss_type")
 
@@ -47,11 +45,11 @@ def get_callbacks(arguments):
 
     csv_logger = CSVLogger(('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation\logs.csv'), separator=',')
     tb = TensorBoard(arguments.tf_log_dir, batch_size=arguments.batch_size, histogram_freq=0)
-    model_checkpoint = ModelCheckpoint(join(arguments.check_dir, args.output_name + '_model_' + args.time + '.hdf5'),
+    model_checkpoint = ModelCheckpoint(join(arguments.check_dir, arguments.time + arguments.net + '.hdf5'),
                                        monitor=monitor_name, save_best_only=True, save_weights_only=True,
                                        verbose=1, mode='max')
-    lr_reducer = ReduceLROnPlateau(monitor=monitor_name, factor=0.95, cooldown=0, patience=10,verbose=1, mode='max')
-    early_stopper = EarlyStopping(monitor=monitor_name, min_delta=0, patience=50, verbose=0, mode='max')
+    lr_reducer = ReduceLROnPlateau(monitor=monitor_name, factor=0.05, cooldown=0, patience=10,verbose=1, mode='max')
+    early_stopper = EarlyStopping(monitor=monitor_name, min_delta=0, patience=25, verbose=0, mode='max')
 
     return [model_checkpoint, csv_logger, lr_reducer, early_stopper, tb]
 
@@ -126,10 +124,22 @@ def train(args, images_train, images_val, g_t_train, g_t_val, u_model, net_input
 
     # Training the network
 
-    history = model.fit_generator(generate_train_batches(images_train, g_t_train, net_input_shape, net=args.net, batchSize=args.batch_size, numSlices=args.slices, subSampAmt=args.subsamp,stride=args.stride, shuff=args.shuffle_data, aug_data=args.aug_data),
-                                  steps_per_epoch=100//args.batch_size, epochs=100, verbose=1, callbacks=callbacks,
-                                  validation_data=generate_val_batches(images_train, g_t_train, net_input_shape, net=args.net,batchSize=args.batch_size,  numSlices=args.slices, subSampAmt=0,stride=2, shuff=args.shuffle_data),
-                                  validation_steps=19//args.batch_size, max_queue_size=10, workers=4, use_multiprocessing=False)
+    history = model.fit_generator(generate_train_batches(images_train, g_t_train, net_input_shape, net=args.net,
+                                                         batchSize=args.batch_size, numSlices=args.slices,
+                                                         subSampAmt=args.subsamp,
+                                                         stride=args.stride,
+                                                         shuff=args.shuffle_data,
+                                                         aug_data=args.aug_data),
+                                  steps_per_epoch=images_train[0].shape[2] * len(images_train)//args.batch_size,
+                                  epochs=100, verbose=1, callbacks=callbacks,
+                                  validation_data=generate_val_batches(images_val, g_t_val, net_input_shape, net=args.net,
+                                                                       batchSize=args.batch_size,
+                                                                       numSlices=args.slices,
+                                                                       subSampAmt=0,
+                                                                       stride=2,
+                                                                       shuff=args.shuffle_data),
+                                  validation_steps=images_train[0].shape[2] * len(images_val)//args.batch_size,
+                                  max_queue_size=10, workers=4, use_multiprocessing=False)
 
     # Plot the training data collected
     plot_training(history, args)

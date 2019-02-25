@@ -11,6 +11,7 @@
 import argparse
 import matplotlib.pyplot as plt
 from keras import backend as K
+
 K.set_image_data_format('channels_last')
 
 from os.path import join
@@ -20,11 +21,11 @@ from os import environ
 from keras.utils import print_summary
 from time import gmtime, strftime
 
-
-from testing_for_load_data import read_and_process_data, equalize_image
+from testing_for_load_data import read_and_process_data, generate_train_test, generate_train_val
 from model_helper import create_model
-
+import random
 time = strftime("%Y-%m-%d-%H-%M-%S", gmtime())
+
 
 def main(args):
     # Ensure training and testing are not all turned off
@@ -32,38 +33,17 @@ def main(args):
 
     # Load the data
     images, ground_truth = read_and_process_data(args.data_root_dir)
-    
 
-    images_train = images[:, :, :475]
-    images_val = images[:, :, 476:495:1]
-    images_test = images[:, :, 496:527:1]
-
-    g_t_train = ground_truth[:, :, :475]
-    g_t_val = ground_truth[:, :, 476:495:1]
-    g_t_tes = ground_truth[:, :, 496:527:1]
-
-    eq_img_train = equalize_image(images_train)
-    eq_img_val = equalize_image(images_val)
-
-    # Read the data to determine the basic shape of the data
-    # Evaluate this algorithm to read the shape of the image
+    images_train_val, images_test, g_t_train_val, g_t_test = generate_train_test(images, ground_truth,
+                                                                         random_num=random.randint(1, 1001))
+    images_train, images_val, g_t_train, g_t_val = generate_train_val(images_train_val, g_t_train_val,
+                                                                      random_num=random.randint(1, 1001))
 
     # input_shape = (192, 192, 1)
-    input_shape = (images.shape[0], images.shape[1], 1)
-    print(input_shape)
-
-    plt.imshow(images_train[:, :, 67], cmap='gray')
-    plt.show()
-
-    plt.imshow(g_t_train[:, :, 67], cmap='gray')
-    plt.show()
-
-    plt.imshow(images_train[:, :, 67] * g_t_train[:, :, 67], cmap='gray')
-    plt.show()
+    input_shape = (images[0].shape[0], images[0].shape[1], 1)
 
     # Create the model for training and testing
     # model_list = [0] train_model, [1] eval_model
-    # model_list = CapsNetBasic(input_shape)
 
     model_list = create_model(args=args, input_shape=input_shape)
 
@@ -103,17 +83,18 @@ def main(args):
     if args.train:
         from train import train
         # Run training
-        train(args, images_train, images_val,  g_t_train, g_t_val, model_list[0], input_shape)
-     
+        train(args, images_train, images_val, g_t_train, g_t_val, model_list[0], input_shape)
+
     if args.test:
         from test import test
         # Run testing
-        test(args, images_train, g_t_train, model_list, input_shape)
-    
+        test(args, images_test, g_t_test, model_list, input_shape)
+
     if args.activation:
         from activation import activation_layer
         # Run training
         activation_layer(args, images_train, model_list[2])
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train on Medical Data')
@@ -123,20 +104,21 @@ if __name__ == '__main__':
                         help='/path/to/trained_model.hdf5 from root. Set to "" for none.')
     parser.add_argument('--split_num', type=int, default=0,
                         help='Which training split to train/test on.')
-    parser.add_argument('--net', type=str.lower, default='segcapbasic',
-                       choices=['segcapsr3', 'segcapsr1', 'segcapsbasic', 'unet'],
+    parser.add_argument('--net', type=str.lower, default='segcapsr3',
+                        choices=['segcapsr3', 'segcapsr1', 'segcapsbasic', 'unet'],
                         help='Choose your network.')
-    parser.add_argument('--train', type=int, default=1, choices=[0,1],
+    parser.add_argument('--train', type=int, default=1, choices=[0, 1],
                         help='Set to 1 to enable training.')
-    parser.add_argument('--test', type=int, default=1, choices=[0,1],
+    parser.add_argument('--test', type=int, default=1, choices=[0, 1],
                         help='Set to 1 to enable testing.')
-    parser.add_argument('--activation', type=int, default=0, choices=[0,1],
+    parser.add_argument('--activation', type=int, default=0, choices=[0, 1],
                         help='Set to 1 to enable activation layer visualization.')
-    parser.add_argument('--shuffle_data', type=int, default=1, choices=[0,1],
+    parser.add_argument('--shuffle_data', type=int, default=1, choices=[0, 1],
                         help='Whether or not to shuffle the training data (both per epoch and in slice order.')
-    parser.add_argument('--aug_data', type=int, default=0, choices=[0,1],
-                       help='Whether or not to use data augmentation during training.')
-    parser.add_argument('--loss', type=str.lower, default='dice', choices=['bce', 'bce_dice', 'w_bce', 'dice', 'mar', 'w_mar'],
+    parser.add_argument('--aug_data', type=int, default=0, choices=[0, 1],
+                        help='Whether or not to use data augmentation during training.')
+    parser.add_argument('--loss', type=str.lower, default='dice',
+                        choices=['bce', 'bce_dice', 'w_bce', 'dice', 'mar', 'w_mar'],
                         help='Which loss to use. "bce" and "w_bce": unweighted and weighted binary cross entropy'
                              '"dice": soft dice coefficient, "mar" and "w_mar": unweighted and weighted margin loss.')
     parser.add_argument('--batch_size', type=int, default=1,
@@ -154,9 +136,9 @@ if __name__ == '__main__':
                         help='Number of slices to move when generating the next sample.')
     parser.add_argument('--verbose', type=int, default=1, choices=[0, 1, 2],
                         help='Set the verbose value for training. 0: Silent, 1: per iteration, 2: per epoch.')
-    parser.add_argument('--save_raw', type=int, default=1, choices=[0,1],
+    parser.add_argument('--save_raw', type=int, default=1, choices=[0, 1],
                         help='Enter 0 to not save, 1 to save.')
-    parser.add_argument('--save_seg', type=int, default=1, choices=[0,1],
+    parser.add_argument('--save_seg', type=int, default=1, choices=[0, 1],
                         help='Enter 0 to not save, 1 to save.')
     parser.add_argument('--save_prefix', type=str, default='',
                         help='Prefix to append to saved CSV.')
@@ -177,13 +159,14 @@ if __name__ == '__main__':
                              'then this number will be inferred, else this argument must be included.')
 
     arguments = parser.parse_args()
-    
+
     if arguments.which_gpus == -2:
         environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
         environ["CUDA_VISIBLE_DEVICES"] = ""
     elif arguments.which_gpus == '-1':
-        assert (arguments.gpus != -1), 'Use all GPUs option selected under --which_gpus, with this option the user MUST ' \
-                                  'specify the number of GPUs available with the --gpus option.'
+        assert (
+                    arguments.gpus != -1), 'Use all GPUs option selected under --which_gpus, with this option the user MUST ' \
+                                           'specify the number of GPUs available with the --gpus option.'
     else:
         arguments.gpus = len(arguments.which_gpus.split(','))
         environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
