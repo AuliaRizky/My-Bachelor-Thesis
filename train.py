@@ -129,7 +129,8 @@ def train(args, images_train, images_val, g_t_train, g_t_val, u_model, net_input
                                                          subSampAmt=args.subsamp,
                                                          stride=args.stride,
                                                          shuff=args.shuffle_data,
-                                                         aug_data=args.aug_data),
+                                                         aug_data=args.aug_data, same=args.same,
+                                                         index_num=args.index_num),
                                   steps_per_epoch=images_train[0].shape[2] * (len(images_train)//args.batch_size),
                                   epochs=100, verbose=1, callbacks=callbacks,
                                   validation_data=generate_val_batches(images_val, g_t_val, net_input_shape, net=args.net,
@@ -137,7 +138,8 @@ def train(args, images_train, images_val, g_t_train, g_t_val, u_model, net_input
                                                                        numSlices=args.slices,
                                                                        subSampAmt=0,
                                                                        stride=2,
-                                                                       shuff=args.shuffle_data),
+                                                                       shuff=args.shuffle_data, same=args.same,
+                                                                       index_num=args.index_num),
                                   validation_steps=images_train[0].shape[2] * (len(images_val)//args.batch_size),
                                   max_queue_size=10, workers=4, use_multiprocessing=False)
 

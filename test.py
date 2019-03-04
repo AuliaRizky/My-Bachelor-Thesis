@@ -131,7 +131,8 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
                                                                               batchSize=1,
                                                                               numSlices=args.slices,
                                                                               subSampAmt=0,
-                                                                              stride=1),
+                                                                              stride=1, same=args.same,
+                                                                              index_num=args.index_num),
                                                         steps=1, max_queue_size=10, workers=4,
                                                         use_multiprocessing=False, verbose=1)
 
@@ -205,4 +206,4 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
             row.append(np.mean(assd_arr))
         writer.writerow(row)
 
-    print('Done.')
+print('Done.')

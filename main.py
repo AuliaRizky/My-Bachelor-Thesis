@@ -43,6 +43,16 @@ def main(args):
     # input_shape = (192, 192, 1)
     input_shape = (images[0].shape[0], images[0].shape[1], 1)
 
+    if args.num_pat != 0:
+        images_train_new = []
+        g_t_train_new = []
+        for i in range(0, args.num_pat, 1):
+            images_train_new.append(images_train[i])
+            g_t_train_new.append(g_t_train[i])
+
+        images_train = images_train_new
+        g_t_train = g_t_train_new
+
     # Create the model for training and testing
     # model_list = [0] train_model, [1] eval_model
 
@@ -91,12 +101,6 @@ def main(args):
         # Run testing
         test(args, images_test, g_t_test, model_list, input_shape)
 
-    if args.activation:
-        from activation import activation_layer
-        # Run training
-        activation_layer(args, images_train, model_list[2])
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train on Medical Data')
     parser.add_argument('--data_root_dir', type=str, required=True,
@@ -112,8 +116,6 @@ if __name__ == '__main__':
                         help='Set to 1 to enable training.')
     parser.add_argument('--test', type=int, default=1, choices=[0, 1],
                         help='Set to 1 to enable testing.')
-    parser.add_argument('--activation', type=int, default=0, choices=[0, 1],
-                        help='Set to 1 to enable activation layer visualization.')
     parser.add_argument('--shuffle_data', type=int, default=1, choices=[0, 1],
                         help='Whether or not to shuffle the training data (both per epoch and in slice order.')
     parser.add_argument('--aug_data', type=int, default=0, choices=[0, 1],
@@ -158,6 +160,13 @@ if __name__ == '__main__':
                         help='Number of GPUs you have available for training. '
                              'If entering specific GPU ids under the --which_gpus arg or if using CPU, '
                              'then this number will be inferred, else this argument must be included.')
+    parser.add_argument('--num_pat', type=int, default=0,
+                        help='0 means all data set. If else than all data set number of patient,' 
+                             'insert number of patient.')
+    parser.add_argument('--same', type=int, default=1, choices=[0, 1],
+                        help='Same indicate that data set feeded contain same slice for each patient. 0 no 1 yes')
+    parser.add_argument('--index_num', nargs='+', type=int, default=[0],
+                        help='insert the slice that we want to use.')
 
     arguments = parser.parse_args()
 
