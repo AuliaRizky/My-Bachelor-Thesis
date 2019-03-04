@@ -120,8 +120,8 @@ def read_and_process_data(data_dir):
             im = nib.load(path, mmap = False)
             image = im.get_fdata()
 
-            folder_dict = {"training_28": [7, 4], "training_30": [5, 6], "training_31": [7, 4], "training_32": [5, 6],
-                           "training_33": [6, 5], "training_35": [7, 4], "training_8": [2, 1]}
+            folder_dict = {"training_28": [6, 3], "training_30": [4, 5], "training_31": [6, 3], "training_32": [4, 5],
+                           "training_33": [5, 4], "training_35": [6, 3], "training_8": [2, 1]}
 
             # If the pixel size is 192 do this
             if image.shape[0] == 192:
