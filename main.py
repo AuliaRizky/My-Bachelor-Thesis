@@ -25,7 +25,6 @@ from model_helper import create_model
 import random
 time = strftime("%Y-%m-%d-%H-%M-%S", gmtime())
 
-
 def main(args):
     # Ensure training and testing are not all turned off
     assert (args.train or args.test), 'Cannot have train or tes as 0'
