@@ -131,7 +131,7 @@ def train(args, images_train, images_val, g_t_train, g_t_val, u_model, net_input
                                                          shuff=args.shuffle_data,
                                                          aug_data=args.aug_data, same=args.same,
                                                          index_num=args.index_num),
-                                  steps_per_epoch=images_train[0].shape[2] * (len(images_train)//args.batch_size),
+                                  steps_per_epoch=1000,
                                   epochs=100, verbose=1, callbacks=callbacks,
                                   validation_data=generate_val_batches(images_val, g_t_val, net_input_shape, net=args.net,
                                                                        batchSize=args.batch_size,
@@ -140,7 +140,7 @@ def train(args, images_train, images_val, g_t_train, g_t_val, u_model, net_input
                                                                        stride=2,
                                                                        shuff=args.shuffle_data, same=args.same,
                                                                        index_num=args.index_num),
-                                  validation_steps=images_train[0].shape[2] * (len(images_val)//args.batch_size),
+                                  validation_steps=10,
                                   max_queue_size=10, workers=4, use_multiprocessing=False)
 
     # Plot the training data collected
