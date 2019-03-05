@@ -16,8 +16,8 @@ from keras.utils import multi_gpu_model
 from keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping, ReduceLROnPlateau, TensorBoard
 import tensorflow as tf
 
-from custom_losses import dice_hard, weighted_binary_crossentropy_loss, dice_loss, margin_loss, dice_coef_loss, bce_dice_loss
-from testing_for_load_data import generate_train_batches, generate_val_batches
+from custom_losses import dice_hard, dice_loss, margin_loss, bce_dice_loss
+from load_data import generate_train_batches, generate_val_batches
 
 def get_loss(train_list, split, net, recon_wei, choice):
 
@@ -137,7 +137,7 @@ def train(args, images_train, images_val, g_t_train, g_t_val, u_model, net_input
                                                                        batchSize=args.batch_size,
                                                                        numSlices=args.slices,
                                                                        subSampAmt=0,
-                                                                       stride=2,
+                                                                       stride=1,
                                                                        shuff=args.shuffle_data, same=args.same,
                                                                        index_num=args.index_num),
                                   validation_steps=10,

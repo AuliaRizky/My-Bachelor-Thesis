@@ -20,7 +20,7 @@ from os import environ
 from keras.utils import print_summary
 from time import gmtime, strftime
 
-from testing_for_load_data import read_and_process_data, generate_train_test, generate_train_val
+from load_data import read_and_process_data, generate_train_test, generate_train_val, analyze_data
 from model_helper import create_model
 import random
 time = strftime("%Y-%m-%d-%H-%M-%S", gmtime())
@@ -37,11 +37,13 @@ def main(args):
                                                                          random_num=random.randint(1, 1001))
     images_train, images_val, g_t_train, g_t_val = generate_train_val(images_train_val, g_t_train_val,
                                                                       random_num=random.randint(1, 1001))
-    print(images_train[0].shape)
-    print(len(images_train))
 
     # input_shape = (192, 192, 1)
     input_shape = (images[0].shape[0], images[0].shape[1], 1)
+
+    analyze = 0
+    if analyze:
+        analyze_data(g_t_train, g_t_val, g_t_test, ground_truth)
 
     if args.num_pat != 0:
         images_train_new = []
@@ -55,7 +57,6 @@ def main(args):
 
     # Create the model for training and testing
     # model_list = [0] train_model, [1] eval_model
-
     model_list = create_model(args=args, input_shape=input_shape)
 
     print_summary(model=model_list[0], positions=[.38, .65, .75, 1.])

@@ -26,7 +26,7 @@ from keras import backend as K
 K.set_image_data_format('channels_last')
 from keras.utils import print_summary
 
-from testing_for_load_data import generate_test_batches
+from load_data import generate_test_batches
 
 
 def threshold_mask(raw_output, threshold):

@@ -104,10 +104,9 @@ def read_and_process_data(data_dir):
     data = {}
     image_list = []
     ground_truth_list = []
-
+    print('Reading Image....')
     for folder in get_sub_folder(data_dir):
         # This part get the image inside the patient data which consist of some folder for MRI image modalities
-        print(folder)
         data[folder] = {}
         for sub_folder in get_sub_folder(os.path.join(data_dir, folder)):
             image_type = get_image_type_from_folder_name(sub_folder)
@@ -127,7 +126,6 @@ def read_and_process_data(data_dir):
             if image.shape[0] == 192:
                 if image.shape[2] == 30 or image.shape[2] == 24:
                     if image_type == '.MR_ADC':
-                        print('currently getting the image of ADC')
                         image_slice = []
                         up_slice = folder_dict.get(str(folder))[0]
                         down_slice = folder_dict.get(str(folder))[1]
@@ -141,10 +139,7 @@ def read_and_process_data(data_dir):
                                                                 (140, 140))))
                         image_list.append(np.concatenate(image_slice, axis=-1))
 
-                        print('ADC has been gathered')
-
                     if image_type == '.OT':
-                        print('currently getting the image of Ground Truth')
 
                         image_slice = []
                         up_slice = folder_dict.get(str(folder))[0]
@@ -156,34 +151,67 @@ def read_and_process_data(data_dir):
                                                       (140, 140))))
                         ground_truth_list.append(np.concatenate(image_slice, axis=-1))
 
-                        print('the image of Ground Truth has been sliced')
                 else:
                     if image_type == '.MR_ADC':
-                        print('currently getting the image of ADC')
                         image_slice = []
                         for slice_num in range(0, image.shape[2], 1):
                             image_slice.append(cropND(range_normalization(image[:, :, slice_num:slice_num + 1:1]),
                                                       (140, 140)))
                         image_list.append(np.concatenate(image_slice, axis=-1))
 
-                        print('ADC has been gathered')
 
                     if image_type == '.OT':
                         image_slice = []
-                        print('currently getting the image of Ground Truth')
                         for slice_num in range(0, image.shape[2], 1):
                             image_slice.append(cropND(image[:, :, slice_num:slice_num + 1:1],
                                                       (140, 140)))
                         ground_truth_list.append(np.concatenate(image_slice, axis=-1))
-                        print('the image of Ground Truth has been sliced')
 
             else:
                 continue
 
             # If needed, for other pixel size do resize in this section
             # For now just continue
-
+    print('Image Acquisition Completed...')
     return image_list, ground_truth_list
+
+def analyze_data(g_t_train, g_t_val, g_t_test, ground_truth):
+
+    count_train = 0
+    count_val = 0
+    count_test = 0
+    count = 0
+
+    for i in range(0, len(g_t_train), 1):
+        index = np.arange(0, g_t_train[0].shape[2])
+        for j in index:
+            if np.any(g_t_train[i][:, :, j:j + 1:1]):
+                count_train += 1
+
+    for i in range(0, len(g_t_val), 1):
+        index = np.arange(0, g_t_val[0].shape[2])
+        for j in index:
+            if np.any(g_t_val[i][:, :, j:j + 1:1]):
+                count_val += 1
+
+    for i in range(0, len(g_t_test), 1):
+        index = np.arange(0, g_t_test[0].shape[2])
+        for j in index:
+            if np.any(g_t_test[i][:, :, j:j + 1:1]):
+                count_test += 1
+
+    for i in range(0, len(ground_truth), 1):
+        index = np.arange(0, ground_truth[0].shape[2])
+        for j in index:
+            if np.any(ground_truth[i][:, :, j:j + 1:1]):
+                count += 1
+
+    print('Number of slice that have ROI:')
+    print('Train set               = ', count_train)
+    print('Val set                 = ', count_val)
+    print('Test set                = ', count_test)
+    print('Total Number            = ', count_test + count_train + count_val)
+    print('Should the Total Number = ', count)
 
 def generate_train_test(images, gt_images, random_num):
     index_image_list = list(range(0, len(images), 1))
@@ -196,14 +224,13 @@ def generate_train_test(images, gt_images, random_num):
     gt_train = []
     images_test = []
     gt_test = []
-    print(index_train)
-    print(index_test)
+
     for i in index_train:
         images_train.append(images[i])
         gt_train.append(gt_images[i])
     for j in index_test:
         images_test.append(images[j])
-        gt_test.append(images[j])
+        gt_test.append(gt_images[j])
 
     return images_train, images_test, gt_train, gt_test
 
@@ -218,12 +245,13 @@ def generate_train_val(images, gt_images, random_num):
     gt_train = []
     images_val = []
     gt_val = []
+
     for i in index_train:
         images_train.append(images[i])
         gt_train.append(gt_images[i])
     for j in index_val:
         images_val.append(images[j])
-        gt_val.append(images[j])
+        gt_val.append(gt_images[j])
 
     return images_train, images_val, gt_train, gt_val
 
