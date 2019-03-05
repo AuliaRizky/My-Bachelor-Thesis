@@ -73,8 +73,8 @@ def equalize_image(image_train):
     return np.stack(eq_img, axis=-1)
 
 def range_normalization(image):
-    image[image > 1024] = 1024
-    image /= 1024
+    image[image > 2048] = 2048
+    image /= 2048
     return image
 
 # Credit to https://stackoverflow.com/users/3931936/losses-don
