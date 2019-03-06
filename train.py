@@ -131,7 +131,7 @@ def train(args, images_train, images_val, g_t_train, g_t_val, u_model, net_input
                                                          shuff=args.shuffle_data,
                                                          aug_data=args.aug_data, same=args.same,
                                                          index_num=args.index_num),
-                                  steps_per_epoch=10000,
+                                  steps_per_epoch=2000,
                                   epochs=100, verbose=1, callbacks=callbacks,
                                   validation_data=generate_val_batches(images_val, g_t_val, net_input_shape, net=args.net,
                                                                        batchSize=args.batch_size,

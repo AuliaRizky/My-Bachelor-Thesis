@@ -136,7 +136,7 @@ def read_and_process_data(data_dir):
 
                         for slice_num in range(0, image.shape[2]-1, 1):
                             image_slice.append(np.fliplr(cropND(image[:, :, slice_num:slice_num+1:1],
-                                                                (140, 140))))
+                                                                (160, 160))))
                         image_list.append(np.concatenate(image_slice, axis=-1))
 
                     if image_type == '.OT':
@@ -148,7 +148,7 @@ def read_and_process_data(data_dir):
                         image = reduce_slice(np.array(image), up_slice + 1, down_slice + 1)
                         for slice_num in range(0, image.shape[2] - 1, 1):
                             image_slice.append(np.fliplr(cropND(image[:, :, slice_num:slice_num + 1:1],
-                                                      (140, 140))))
+                                                      (160, 160))))
                         ground_truth_list.append(np.concatenate(image_slice, axis=-1))
 
                 else:
@@ -156,7 +156,7 @@ def read_and_process_data(data_dir):
                         image_slice = []
                         for slice_num in range(0, image.shape[2], 1):
                             image_slice.append(cropND(range_normalization(image[:, :, slice_num:slice_num + 1:1]),
-                                                      (140, 140)))
+                                                      (160, 160)))
                         image_list.append(np.concatenate(image_slice, axis=-1))
 
 
@@ -164,7 +164,7 @@ def read_and_process_data(data_dir):
                         image_slice = []
                         for slice_num in range(0, image.shape[2], 1):
                             image_slice.append(cropND(image[:, :, slice_num:slice_num + 1:1],
-                                                      (140, 140)))
+                                                      (160, 160)))
                         ground_truth_list.append(np.concatenate(image_slice, axis=-1))
 
             else:
