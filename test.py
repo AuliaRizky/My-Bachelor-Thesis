@@ -131,9 +131,8 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
                                                                               batchSize=1,
                                                                               numSlices=args.slices,
                                                                               subSampAmt=0,
-                                                                              stride=1, same=args.same,
-                                                                              index_num=args.index_num),
-                                                        steps=1, max_queue_size=10, workers=4,
+                                                                              stride=1),
+                                                        steps=images_test[0].shape[2], max_queue_size=10, workers=4,
                                                         use_multiprocessing=False, verbose=1)
 
             if args.net.find('caps') != -1:
@@ -149,27 +148,24 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
             plt.imshow(output[:, :, 0], cmap='gray')
             plt.show()
 
-            plt.imshow(output[:, :, 0], cmap='gray')
-            plt.show()
-
             # Plot Qualitative Figure
             print('Creating Qualitative Figure for Quick Reference')
             f, ax = plt.subplots(1, 3, figsize=(15, 5))
 
             ax[0].imshow(test_image[:, :, test_image.shape[2] // 3], alpha=1, cmap='gray')
-            ax[0].imshow(output[:, :, 0], alpha=0.5, cmap='Blues')
+            ax[0].imshow(output[:, :, test_image.shape[2] // 3], alpha=0.5, cmap='Blues')
             ax[0].imshow(gt_test_image[:, :, test_image.shape[2] // 3], alpha=0.2, cmap='Reds')
             ax[0].set_title('Slice {}/{}'.format(test_image.shape[2] // 3, test_image.shape[2]))
             ax[0].axis('off')
 
             ax[1].imshow(test_image[:, :, test_image.shape[2] // 2], alpha=1, cmap='gray')
-            ax[1].imshow(output[:, :, 0], alpha=0.5, cmap='Blues')
+            ax[1].imshow(output[:, :, test_image.shape[2] // 3], alpha=0.5, cmap='Blues')
             ax[1].imshow(gt_test_image[:, :, test_image.shape[2] // 2], alpha=0.2, cmap='Reds')
             ax[1].set_title('Slice {}/{}'.format(test_image.shape[2] // 2, test_image.shape[2]))
             ax[1].axis('off')
 
             ax[2].imshow(test_image[:, :, test_image.shape[2] // 2 + test_image.shape[2] // 4], alpha=1, cmap='gray')
-            ax[2].imshow(output[:, :, 0], alpha=0.5, cmap='Blues')
+            ax[2].imshow(output[:, :, test_image.shape[2] // 3], alpha=0.5, cmap='Blues')
             ax[2].imshow(gt_test_image[:, :, test_image.shape[2] // 2 + test_image.shape[2] // 4], alpha=0.2, cmap='Reds')
             ax[2].set_title('Slice {}/{}'.format(test_image.shape[2] // 2 + test_image.shape[2] // 4, test_image.shape[2]))
             ax[2].axis('off')

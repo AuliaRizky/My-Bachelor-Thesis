@@ -99,7 +99,7 @@ def get_image_type_from_folder_name(sub_folder):
 def get_sub_folder(data_dir):
     return [sub_folder for sub_folder in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, sub_folder))]
 
-def read_and_process_data(data_dir):
+def read_and_process_data(data_dir, size):
     # This method get all the image available for every patient data
     data = {}
     image_list = []
@@ -136,7 +136,7 @@ def read_and_process_data(data_dir):
 
                         for slice_num in range(0, image.shape[2]-1, 1):
                             image_slice.append(np.fliplr(cropND(image[:, :, slice_num:slice_num+1:1],
-                                                                (160, 160))))
+                                                                (size, size))))
                         image_list.append(np.concatenate(image_slice, axis=-1))
 
                     if image_type == '.OT':
@@ -148,7 +148,7 @@ def read_and_process_data(data_dir):
                         image = reduce_slice(np.array(image), up_slice + 1, down_slice + 1)
                         for slice_num in range(0, image.shape[2] - 1, 1):
                             image_slice.append(np.fliplr(cropND(image[:, :, slice_num:slice_num + 1:1],
-                                                      (160, 160))))
+                                                      (size, size))))
                         ground_truth_list.append(np.concatenate(image_slice, axis=-1))
 
                 else:
@@ -156,15 +156,14 @@ def read_and_process_data(data_dir):
                         image_slice = []
                         for slice_num in range(0, image.shape[2], 1):
                             image_slice.append(cropND(range_normalization(image[:, :, slice_num:slice_num + 1:1]),
-                                                      (160, 160)))
+                                                      (size, size)))
                         image_list.append(np.concatenate(image_slice, axis=-1))
-
 
                     if image_type == '.OT':
                         image_slice = []
                         for slice_num in range(0, image.shape[2], 1):
                             image_slice.append(cropND(image[:, :, slice_num:slice_num + 1:1],
-                                                      (160, 160)))
+                                                      (size, size)))
                         ground_truth_list.append(np.concatenate(image_slice, axis=-1))
 
             else:
@@ -393,30 +392,28 @@ def generate_val_batches(val_list, gt_val_list, net_input_shape, net, batchSize=
 
 
 @threadsafe_generator
-def generate_test_batches(images_test, net_input_shape, batchSize=1, numSlices=1, subSampAmt=0,
-                          stride=1, downSampAmt=1, same=0, index_num=[9, 10]):
+def generate_test_batches(test_images, net_input_shape, batchSize=1, numSlices=1, subSampAmt=0,
+                          stride=1, downSampAmt=1):
     # Create placeholders for testing
     logging.info('\nload_3D_data.generate_test_batches')
     img_batch = np.zeros((np.concatenate(((batchSize,), net_input_shape))), dtype=np.float32)
 
     count = 0
+
     if numSlices == 1:
         subSampAmt = 0
     elif subSampAmt == -1 and numSlices > 1:
         np.random.seed(None)
-        subSampAmt = int(rand(1) * (images_test.shape[2] * 0.05))
+        subSampAmt = int(rand(1) * (test_images.shape[2] * 0.05))
 
-    if not same:
-        indexes = np.arange(0, images_test.shape[2] - numSlices * (subSampAmt + 1) + 1, stride)
-    else:
-        indexes = index_num
+    indexes = np.arange(0, test_images.shape[2] - numSlices * (subSampAmt + 1) + 1, stride)
 
     for j in indexes:
         if img_batch.ndim == 4:
-            img_batch[count, :, :, :] = images_test[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
+            img_batch[count, :, :, :] = test_images[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
         elif img_batch.ndim == 5:
             # Assumes img and mask are single channel. Replace 0 with : if multi-channel.
-            img_batch[count, :, :, :, 0] = images_test[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
+            img_batch[count, :, :, :, 0] = test_images[:, :, j:j + numSlices * (subSampAmt + 1):subSampAmt + 1]
         else:
             logging.error('Error this function currently only supports 2D and 3D data.')
             exit(0)
@@ -428,3 +425,5 @@ def generate_test_batches(images_test, net_input_shape, batchSize=1, numSlices=1
 
     if count != 0:
         yield (img_batch[:count, :, :, :])
+
+
