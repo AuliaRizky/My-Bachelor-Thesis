@@ -30,7 +30,7 @@ def main(args):
     assert (args.train or args.test), 'Cannot have train or tes as 0'
 
     # Load the data
-    images, ground_truth = read_and_process_data(args.data_root_dir)
+    images, ground_truth = read_and_process_data(args.data_root_dir, args.size)
 
     images_train_val, images_test, g_t_train_val, g_t_test = generate_train_test(images, ground_truth,
                                                                          random_num=random.randint(1, 1001))
@@ -126,6 +126,8 @@ if __name__ == '__main__':
                              '"dice": soft dice coefficient, "mar" and "w_mar": unweighted and weighted margin loss.')
     parser.add_argument('--batch_size', type=int, default=1,
                         help='Batch size for training/testing.')
+    parser.add_argument('--size', type=int, default=160,
+                        help='The size of images.')
     parser.add_argument('--initial_lr', type=float, default=0.01,
                         help='Initial learning rate for Adam.')
     parser.add_argument('--recon_wei', type=float, default=131.072,
