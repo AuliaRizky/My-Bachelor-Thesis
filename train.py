@@ -16,7 +16,7 @@ from keras.utils import multi_gpu_model
 from keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping, ReduceLROnPlateau, TensorBoard
 import tensorflow as tf
 
-from custom_losses import dice_hard, dice_loss, margin_loss, bce_dice_loss
+from custom_losses import dice_hard, dice_loss, margin_loss, bce_dice_loss, dice_coef
 from load_data import generate_train_batches, generate_val_batches
 
 def get_loss(train_list, split, net, recon_wei, choice):
@@ -39,17 +39,17 @@ def get_loss(train_list, split, net, recon_wei, choice):
 
 def get_callbacks(arguments):
     if arguments.net.find('caps') != -1:
-        monitor_name = 'val_out_seg_dice_hard'
+        monitor_name = 'val_out_seg_dice_coef'
     else:
-        monitor_name = 'val_dice_hard'
+        monitor_name = 'val_dice_coef'
 
     csv_logger = CSVLogger(('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation\logs.csv'), separator=',')
     tb = TensorBoard(arguments.tf_log_dir, batch_size=arguments.batch_size, histogram_freq=0)
     model_checkpoint = ModelCheckpoint(join(arguments.check_dir,  arguments.output_name + '_model_' + arguments.time + '.hdf5'),
                                        monitor=monitor_name, save_best_only=True, save_weights_only=True,
                                        verbose=1, mode='max')
-    lr_reducer = ReduceLROnPlateau(monitor=monitor_name, factor=0.05, cooldown=0, patience=10,verbose=1, mode='max')
-    early_stopper = EarlyStopping(monitor=monitor_name, min_delta=0, patience=25, verbose=0, mode='max')
+    lr_reducer = ReduceLROnPlateau(monitor=monitor_name, factor=0.05, cooldown=0, patience=5,verbose=1, mode='max')
+    early_stopper = EarlyStopping(monitor=monitor_name, min_delta=0, patience=15, verbose=0, mode='max')
 
     return [model_checkpoint, csv_logger, lr_reducer, early_stopper, tb]
 
@@ -57,9 +57,9 @@ def compile_model(args, train_list, net_input_shape, uncomp_model):
     # Set optimizer loss and metrics
     opt = Adam(lr=args.initial_lr, beta_1=0.99, beta_2=0.999, decay=1e-6)
     if args.net.find('caps') != -1:
-        metrics = {'out_seg': dice_hard}
+        metrics = {'out_seg': dice_coef}
     else:
-        metrics = [dice_hard]
+        metrics = [dice_coef]
 
     loss, loss_weighting = get_loss(train_list = train_list, split=args.split_num, net=args.net,
                                     recon_wei=args.recon_wei, choice=args.loss)
@@ -83,19 +83,19 @@ def plot_training(training_history, arguments):
     f.suptitle(arguments.net, fontsize=18)
 
     if arguments.net.find('caps') != -1:
-        ax1.plot(training_history.history['out_seg_dice_hard'])
-        ax1.plot(training_history.history['val_out_seg_dice_hard'])
+        ax1.plot(training_history.history['out_seg_dice_coef'])
+        ax1.plot(training_history.history['val_out_seg_dice_coef'])
     else:
-        ax1.plot(training_history.history['dice_hard'])
-        ax1.plot(training_history.history['val_dice_hard'])
+        ax1.plot(training_history.history['dice_coef'])
+        ax1.plot(training_history.history['val_dice_coef'])
     ax1.set_title('Dice Coefficient')
     ax1.set_ylabel('Dice', fontsize=12)
     ax1.legend(['Train', 'Val'], loc='upper left')
     ax1.set_yticks(np.arange(0, 1.05, 0.05))
     if arguments.net.find('caps') != -1:
-        ax1.set_xticks(np.arange(0, len(training_history.history['out_seg_dice_hard'])))
+        ax1.set_xticks(np.arange(0, len(training_history.history['out_seg_dice_coef'])))
     else:
-        ax1.set_xticks(np.arange(0, len(training_history.history['dice_hard'])))
+        ax1.set_xticks(np.arange(0, len(training_history.history['dice_coef'])))
     ax1.grid(True)
     gridlines1 = ax1.get_xgridlines() + ax1.get_ygridlines()
     for line in gridlines1:

@@ -115,7 +115,7 @@ class ConvCapsuleLayer(layers.Layer):
                                  name='W')
 
         self.b = self.add_weight(shape=[1, 1, self.num_capsule, self.num_atoms],
-                                 initializer=initializers.constant(0.1),
+                                 initializer=initializers.constant(0.00000001),
                                  name='b')
 
         self.built = True

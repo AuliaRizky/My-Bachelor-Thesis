@@ -18,12 +18,12 @@ def CapsNetBasic(input_shape, n_class=2):
     # Layer 1: Primary Capsule: Conv cap with routing 1
     # num_capsule should be vector_dim
     # num_atoms should be num_capsule
-    primary_caps = ConvCapsuleLayer(kernel_size=5, num_capsule=8, num_atoms=128, strides=1, padding='same',
+    primary_caps = ConvCapsuleLayer(kernel_size=5, num_capsule=8, num_atoms=32, strides=1, padding='same',
                                     routings=1, name='primarycaps')(conv1_reshaped)
 
     # Layer 4: Convolutional Capsule: 1x1
-    seg_caps = ConvCapsuleLayer(kernel_size=1, num_capsule=1, num_atoms=8, strides=1, padding='same',
-                                routings=3, name='seg_caps')(primary_caps)
+    seg_caps = ConvCapsuleLayer(kernel_size=1, num_capsule=1, num_atoms=16, strides=1, padding='same',
+                                routings=6, name='seg_caps')(primary_caps)
 
     # Layer 4: This is an auxiliary layer to replace each capsule with its length. Just to match the true label's shape.
     out_seg_1 = Length(num_classes=n_class, seg=True, name='out_seg_1')(seg_caps)

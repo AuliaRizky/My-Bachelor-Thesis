@@ -143,6 +143,8 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
 
             print(output.shape)
             output = np.rollaxis(output, 0, 3)
+            output[output > 0.65] = 1
+            output[output <= 0.65] = 0
             print(output.shape)
 
             plt.imshow(output[:, :, 0], cmap='gray')
@@ -159,13 +161,13 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
             ax[0].axis('off')
 
             ax[1].imshow(test_image[:, :, test_image.shape[2] // 2], alpha=1, cmap='gray')
-            ax[1].imshow(output[:, :, test_image.shape[2] // 3], alpha=0.5, cmap='Blues')
+            ax[1].imshow(output[:, :, test_image.shape[2] // 2], alpha=0.5, cmap='Blues')
             ax[1].imshow(gt_test_image[:, :, test_image.shape[2] // 2], alpha=0.2, cmap='Reds')
             ax[1].set_title('Slice {}/{}'.format(test_image.shape[2] // 2, test_image.shape[2]))
             ax[1].axis('off')
 
             ax[2].imshow(test_image[:, :, test_image.shape[2] // 2 + test_image.shape[2] // 4], alpha=1, cmap='gray')
-            ax[2].imshow(output[:, :, test_image.shape[2] // 3], alpha=0.5, cmap='Blues')
+            ax[2].imshow(output[:, :, test_image.shape[2] // 2 + test_image.shape[2] // 4], alpha=0.5, cmap='Blues')
             ax[2].imshow(gt_test_image[:, :, test_image.shape[2] // 2 + test_image.shape[2] // 4], alpha=0.2, cmap='Reds')
             ax[2].set_title('Slice {}/{}'.format(test_image.shape[2] // 2 + test_image.shape[2] // 4, test_image.shape[2]))
             ax[2].axis('off')

@@ -34,7 +34,6 @@ import nibabel as nib
 import numpy as np
 import logging
 import operator
-import cv2
 from keras import backend as K
 K.set_image_data_format('channels_last')
 from skimage import exposure
@@ -43,8 +42,7 @@ from os.path import join
 from custom_data_aug import augmentImages
 from numpy.random import rand, shuffle
 import matplotlib.pyplot as plt
-from PIL import Image
-from resizeimage import resizeimage
+import cv2
 
 from threadsafe import threadsafe_generator
 
@@ -75,6 +73,20 @@ def equalize_image(image_train):
         eq_img.append(exposure.equalize_hist(image_train[:, :, i]))
     return np.stack(eq_img, axis=-1)
 
+def range_normalization(image):
+    image_list = []
+    for i in range(0, image.shape[2], 1):
+        max_num = 0.55 * np.amax(image[:, :, i])
+        if max_num == 0:
+            image_new = image[:, :, i]
+            image_list.append(np.expand_dims(image_new, axis=2))
+        else:
+            image_new = image[:, :, i]
+            image_new[image_new > max_num] = max_num
+            image_new = image_new / max_num
+            image_list.append(np.expand_dims(image_new, axis=2))
+    image = np.concatenate(image_list, axis=-1)
+    return image
 def resize_image(image):
     width = 192
     resize_image_list = []
@@ -83,21 +95,6 @@ def resize_image(image):
         image_resize = cv2.resize(image_bfr_resize, dsize=(width, width), interpolation=cv2.INTER_AREA)
         resize_image_list.append(np.expand_dims(image_resize, axis=2))
     image = np.concatenate(resize_image_list, axis=-1)
-    return image
-
-def range_normalization(image):
-    image_list = []
-    for i in range(0, image.shape[2], 1):
-        max_num = 0.75 * np.amax(image[:, :, i])
-        if max_num == 0:
-            image_new = image[:, :, i]
-            image_list.append(np.expand_dims(image_new, axis=2))
-        else:
-            image_new = image[:, :, i]
-            image_new[image_new > max_num] = max_num
-            image_new = image_new/max_num
-            image_list.append(np.expand_dims(image_new, axis=2))
-    image = np.concatenate(image_list, axis=-1)
     return image
 
 # Credit to https://stackoverflow.com/users/3931936/losses-don
@@ -227,6 +224,44 @@ def read_and_process_data(data_dir, size):
     print('Image Acquisition Completed...')
     return image_list, ground_truth_list
 
+def analyze_data(g_t_train, g_t_val, g_t_test, ground_truth):
+
+    count_train = 0
+    count_val = 0
+    count_test = 0
+    count = 0
+
+    for i in range(0, len(g_t_train), 1):
+        index = np.arange(0, g_t_train[0].shape[2])
+        for j in index:
+            if np.any(g_t_train[i][:, :, j:j + 1:1]):
+                count_train += 1
+
+    for i in range(0, len(g_t_val), 1):
+        index = np.arange(0, g_t_val[0].shape[2])
+        for j in index:
+            if np.any(g_t_val[i][:, :, j:j + 1:1]):
+                count_val += 1
+
+    for i in range(0, len(g_t_test), 1):
+        index = np.arange(0, g_t_test[0].shape[2])
+        for j in index:
+            if np.any(g_t_test[i][:, :, j:j + 1:1]):
+                count_test += 1
+
+    for i in range(0, len(ground_truth), 1):
+        index = np.arange(0, ground_truth[0].shape[2])
+        for j in index:
+            if np.any(ground_truth[i][:, :, j:j + 1:1]):
+                count += 1
+
+    print('Number of slice that have ROI:')
+    print('Train set               = ', count_train)
+    print('Val set                 = ', count_val)
+    print('Test set                = ', count_test)
+    print('Total Number            = ', count_test + count_train + count_val)
+    print('Should the Total Number = ', count)
+
 def generate_train_test(images, gt_images, random_num):
     index_image_list = list(range(0, len(images), 1))
     index_gt_list = list(range(0, len(images), 1))
@@ -238,9 +273,6 @@ def generate_train_test(images, gt_images, random_num):
     gt_train = []
     images_test = []
     gt_test = []
-
-    print(index_train)
-    print(index_test)
 
     for i in index_train:
         images_train.append(images[i])
@@ -262,9 +294,6 @@ def generate_train_val(images, gt_images, random_num):
     gt_train = []
     images_val = []
     gt_val = []
-
-    print(index_train)
-    print(index_val)
 
     for i in index_train:
         images_train.append(images[i])
@@ -446,5 +475,3 @@ def generate_test_batches(test_images, net_input_shape, batchSize=1, numSlices=1
 
     if count != 0:
         yield (img_batch[:count, :, :, :])
-
-

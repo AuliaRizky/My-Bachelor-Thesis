@@ -10,7 +10,7 @@
 
 import argparse
 from keras import backend as K
-
+import matplotlib.pyplot as plt
 K.set_image_data_format('channels_last')
 
 from os.path import join
@@ -39,6 +39,9 @@ def main(args):
 
     # input_shape = (192, 192, 1)
     input_shape = (images[0].shape[0], images[0].shape[1], 1)
+
+    plt.imshow(images[3][:, :, 10], cmap='gray')
+    plt.show()
 
     analyze = 0
     if analyze:
@@ -128,7 +131,7 @@ if __name__ == '__main__':
                         help='Batch size for training/testing.')
     parser.add_argument('--size', type=int, default=160,
                         help='The size of images.')
-    parser.add_argument('--initial_lr', type=float, default=0.01,
+    parser.add_argument('--initial_lr', type=float, default=0.025,
                         help='Initial learning rate for Adam.')
     parser.add_argument('--recon_wei', type=float, default=131.072,
                         help="If using capsnet: The coefficient (weighting) for the loss of decoder")
@@ -165,7 +168,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_pat', type=int, default=0,
                         help='0 means all data set. If else than all data set number of patient,' 
                              'insert number of patient.')
-    parser.add_argument('--same', type=int, default=1, choices=[0, 1],
+    parser.add_argument('--same', type=int, default=0, choices=[0, 1],
                         help='Same indicate that data set feeded contain same slice for each patient. 0 no 1 yes')
     parser.add_argument('--index_num', nargs='+', type=int, default=[0],
                         help='insert the slice that we want to use.')
