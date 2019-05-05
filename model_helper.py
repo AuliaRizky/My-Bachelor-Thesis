@@ -23,6 +23,10 @@ def create_model(args, input_shape):
             from capsnet import CapsNetBasic
             model_list = CapsNetBasic(input_shape)
             return model_list
+        elif args.net == 'devsegcaps':
+            from capsnet import DevSegCaps
+            model_list = DevSegCaps(input_shape)
+            return model_list
         elif args.net == 'unet':
             from unet import UNet
             model_list = UNet(input_shape)
@@ -43,6 +47,10 @@ def create_model(args, input_shape):
             elif args.net == 'segcapsbasic':
                 from capsnet import CapsNetBasic
                 model_list = CapsNetBasic(input_shape)
+                return model_list
+            elif args.net == 'devsegcaps':
+                from capsnet import DevSegCaps
+                model_list = DevSegCaps(input_shape)
                 return model_list
             elif args.net == 'unet':
                 from unet import UNet

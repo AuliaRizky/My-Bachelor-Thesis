@@ -26,7 +26,7 @@ from keras import backend as K
 K.set_image_data_format('channels_last')
 from keras.utils import print_summary
 
-from testing_for_load_data import generate_test_batches
+from load_data import generate_test_batches
 
 
 def threshold_mask(raw_output, threshold):
@@ -38,10 +38,9 @@ def threshold_mask(raw_output, threshold):
 
     print('\tThreshold: {}'.format(threshold))
 
-    raw_output[raw_output > threshold] = 1
-    raw_output[raw_output < 1] = 0
+    return threshold
 
-    all_labels = measure.label(raw_output)
+    '''all_labels = measure.label(raw_output)
     props = measure.regionprops(all_labels)
     props.sort(key=lambda x: x.area, reverse=True)
     thresholded_mask = np.zeros(raw_output.shape)
@@ -57,14 +56,22 @@ def threshold_mask(raw_output, threshold):
 
     thresholded_mask = scipy.ndimage.morphology.binary_fill_holes(thresholded_mask).astype(np.uint8)
 
-    return thresholded_mask
+    return thresholded_mask'''
 
+def dice_sorensen(y_true, y_pred):
+    inse = np.sum(np.sum(y_true * y_pred, axis=0), axis=0)
+    l = np.sum(np.sum(y_true, axis=0), axis=0)
+    r = np.sum(np.sum(y_pred, axis=0), axis=0)
+    smooth =  1e-7
+
+    dice = (2 * inse + smooth) / (l + r + smooth)
+    return dice
 
 def test(args, images_test, gt_test, model_list, net_input_shape):
     if args.weights_path == '':
         weights_path = join(args.check_dir, args.output_name + '_model_' + args.time + '.hdf5')
     else:
-        weights_path = join(args.data_root_dir, args.weights_path)
+        weights_path = join(args.weights_path)
 
     output_dir = join('D:\Engineering Physics\Skripsi\Program\Ischemic Stroke Segmentation', 'results', args.net)
     raw_out_dir = join(output_dir, 'raw_output')
@@ -123,51 +130,72 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
 
         writer.writerow(row)
 
-        for i in range(0, len(images_test) - 1, 1):
-            gt_test_image = gt_test[i]
-            test_image = images_test[i]
-            output_array = eval_model.predict_generator(generate_test_batches(test_image,
+        for i in range(0, len(images_test), 1):
+            print(images_test[i].shape)
+            output_array = eval_model.predict_generator(generate_test_batches([images_test[i]],
                                                                               net_input_shape,
                                                                               batchSize=1,
-                                                                              numSlices=args.slices,
+                                                                              numSlices=1,
                                                                               subSampAmt=0,
                                                                               stride=1),
-                                                        steps=1, max_queue_size=10, workers=4,
+                                                        steps=19, max_queue_size=1, workers=0,
                                                         use_multiprocessing=False, verbose=1)
 
             if args.net.find('caps') != -1:
                 output = output_array[0][:, :, :, 0]
-                #recon = output_array[1][:, :, :, 0]
+                recon = output_array[1][:, :, :, 0]
             else:
                 output = output_array[:, :, :, 0]
 
-            print(output.shape)
-            output = np.rollaxis(output, 0, 3)
-            print(output.shape)
+            threshold = 0.7
 
-            plt.imshow(output[:, :, 0], cmap='gray')
-            plt.show()
+            output = np.rollaxis(output, 0, 3)
+            recon = np.rollaxis(recon, 0, 3)
+
+            #for k in range(0, 19, 1):
+            #   plt.imshow(output[:, :, k], cmap='gray')
+            #  plt.show()
+
+            print(threshold)
+            output_bin = output[:, :, :]
+            print(output_bin.shape)
+
+            output_bin[output_bin > threshold] = 1
+            output_bin[output_bin < 1] = 0
+
+            # for l in range(0, 19, 1):
+            #    plt.imshow(output_bin[:, :, l], cmap='gray')
+            #   plt.show()
+
+            for o in range(0, 19, 1):
+                print('Dice_Slice_', o, '= ', dice_sorensen(gt_test[i][:, :, o], output[:, :, o]))
+
+            for m in range(0, 19, 1):
+                plt.imshow(images_test[i][:, :, m], alpha=1, cmap='gray')
+                plt.imshow(output_bin[:, :, m], alpha=0.5, cmap='Blues')
+                plt.imshow(gt_test[i][:, :, m], alpha=0.5, cmap='Reds')
+                plt.show()
 
             # Plot Qualitative Figure
             print('Creating Qualitative Figure for Quick Reference')
             f, ax = plt.subplots(1, 3, figsize=(15, 5))
 
-            ax[0].imshow(test_image[:, :, test_image.shape[2] // 3], alpha=1, cmap='gray')
-            ax[0].imshow(output[:, :, test_image.shape[2] // 3], alpha=0.5, cmap='Blues')
-            ax[0].imshow(gt_test_image[:, :, test_image.shape[2] // 3], alpha=0.2, cmap='Reds')
-            ax[0].set_title('Slice {}/{}'.format(test_image.shape[2] // 3, test_image.shape[2]))
+            ax[0].imshow(images_test[i][:, :, images_test[i].shape[2] // 3], alpha=1, cmap='gray')
+            ax[0].imshow(output[:, :, images_test[i].shape[2] // 3], alpha=0.5, cmap='Blues')
+            ax[0].imshow(gt_test[i][:, :, images_test[i].shape[2] // 3], alpha=0.2, cmap='Reds')
+            ax[0].set_title('Slice {}/{}'.format(images_test[i].shape[2] // 3, images_test[i].shape[2]))
             ax[0].axis('off')
 
-            ax[1].imshow(test_image[:, :, test_image.shape[2] // 2], alpha=1, cmap='gray')
-            ax[1].imshow(output[:, :, test_image.shape[2] // 2], alpha=0.5, cmap='Blues')
-            ax[1].imshow(gt_test_image[:, :, test_image.shape[2] // 2], alpha=0.2, cmap='Reds')
-            ax[1].set_title('Slice {}/{}'.format(test_image.shape[2] // 2, test_image.shape[2]))
+            ax[1].imshow(images_test[i][:, :, images_test[i].shape[2] // 2], alpha=1, cmap='gray')
+            ax[1].imshow(output[:, :, images_test[i].shape[2] // 2], alpha=0.5, cmap='Blues')
+            ax[1].imshow(gt_test[i][:, :, images_test[i].shape[2] // 2], alpha=0.2, cmap='Reds')
+            ax[1].set_title('Slice {}/{}'.format(images_test[i].shape[2] // 2, images_test[i].shape[2]))
             ax[1].axis('off')
 
-            ax[2].imshow(test_image[:, :, test_image.shape[2] // 2 + test_image.shape[2] // 4], alpha=1, cmap='gray')
-            ax[2].imshow(output[:, :, test_image.shape[2] // 2 + test_image.shape[2] // 4], alpha=0.5, cmap='Blues')
-            ax[2].imshow(gt_test_image[:, :, test_image.shape[2] // 2 + test_image.shape[2] // 4], alpha=0.2, cmap='Reds')
-            ax[2].set_title('Slice {}/{}'.format(test_image.shape[2] // 2 + test_image.shape[2] // 4, test_image.shape[2]))
+            ax[2].imshow(images_test[i][:, :, images_test[i].shape[2] // 2 + images_test[i].shape[2] // 4], alpha=1, cmap='gray')
+            ax[2].imshow(output[:, :, images_test[i].shape[2] // 2 + images_test[i].shape[2] // 4], alpha=0.5, cmap='Blues')
+            ax[2].imshow(gt_test[i][:, :, images_test[i].shape[2] // 2 + images_test[i].shape[2] // 4], alpha=0.2, cmap='Reds')
+            ax[2].set_title('Slice {}/{}'.format(images_test[i].shape[2] // 2 + images_test[i].shape[2] // 4, images_test[i].shape[2]))
             ax[2].axis('off')
 
             fig = plt.gcf()
@@ -180,17 +208,17 @@ def test(args, images_test, gt_test, model_list, net_input_shape):
             row = ['Average Score']
             if args.compute_dice:
                 print('Computing Dice')
-                dice_arr[i] = dc(output, gt_test_image)
+                dice_arr[i] = dc(output, gt_test[i])
                 print('\tDice: {}'.format(dice_arr[i]))
                 row.append(dice_arr[i])
             if args.compute_jaccard:
                 print('Computing Jaccard')
-                jacc_arr[i] = jc(output, gt_test_image)
+                jacc_arr[i] = jc(output, gt_test[i])
                 print('\tJaccard: {}'.format(jacc_arr[i]))
                 row.append(jacc_arr[i])
             if args.compute_assd:
                 print('Computing ASSD')
-                assd_arr[i] = assd(output, gt_test_image, connectivity=1)
+                assd_arr[i] = assd(output, gt_test[i], connectivity=1)
                 print('\tASSD: {}'.format(assd_arr[i]))
                 row.append(assd_arr[i])
 

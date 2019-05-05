@@ -16,8 +16,8 @@ from keras.utils import multi_gpu_model
 from keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping, ReduceLROnPlateau, TensorBoard
 import tensorflow as tf
 
-from custom_losses import dice_hard, weighted_binary_crossentropy_loss, dice_loss, margin_loss, dice_coef_loss, bce_dice_loss
-from testing_for_load_data import generate_train_batches, generate_val_batches
+from custom_losses import dice_hard, dice_loss, margin_loss, bce_dice_loss
+from load_data import generate_train_batches, generate_val_batches
 
 def get_loss(train_list, split, net, recon_wei, choice):
 
@@ -129,16 +129,18 @@ def train(args, images_train, images_val, g_t_train, g_t_val, u_model, net_input
                                                          subSampAmt=args.subsamp,
                                                          stride=args.stride,
                                                          shuff=args.shuffle_data,
-                                                         aug_data=args.aug_data),
-                                  steps_per_epoch=images_train[0].shape[2] * (len(images_train)//args.batch_size),
+                                                         aug_data=args.aug_data, same=args.same,
+                                                         index_num=args.index_num),
+                                  steps_per_epoch=2000,
                                   epochs=100, verbose=1, callbacks=callbacks,
                                   validation_data=generate_val_batches(images_val, g_t_val, net_input_shape, net=args.net,
                                                                        batchSize=args.batch_size,
                                                                        numSlices=args.slices,
                                                                        subSampAmt=0,
-                                                                       stride=2,
-                                                                       shuff=args.shuffle_data),
-                                  validation_steps=images_train[0].shape[2] * (len(images_val)//args.batch_size),
+                                                                       stride=1,
+                                                                       shuff=args.shuffle_data, same=args.same,
+                                                                       index_num=args.index_num),
+                                  validation_steps=10,
                                   max_queue_size=10, workers=4, use_multiprocessing=False)
 
     # Plot the training data collected
